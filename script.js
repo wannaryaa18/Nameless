@@ -4,7 +4,18 @@ let currentFilter = 'all';
 let selectedTag = '';
 let postIdCounter = 1;
 let currentLang = 'id';
-let isUserPremium = false; // Set ke true untuk menguji fitur premium yang tidak terkunci
+let isUserPremium = false;
+
+// P2P Chat Globals
+let currentUserId = null;
+const P2P_USER_PREFIX = 'p2pUser_';
+const P2P_MESSAGE_PREFIX = 'p2pMessage_';
+const P2P_TYPING_PREFIX = 'p2pTyping_'; // Format: typing_typerId_targetId
+const USER_ACTIVITY_TIMEOUT = 15000; // 15 detik
+const MAX_P2P_CHAT_WINDOWS = 3;
+let openP2pChatWindows = {}; // { targetUserId: element }
+let p2pChatWindowPositions = []; // Menyimpan index posisi yang terpakai (0, 1, 2, ...)
+
 
 // DOM elements
 const loginPage = document.getElementById('loginPage');
@@ -36,6 +47,12 @@ const navAbout = document.getElementById('navAbout');
 const navSettings = document.getElementById('navSettings');
 const communityGuidelinesLink = document.getElementById('communityGuidelinesLink');
 
+// P2P Chat DOM Elements
+const p2pChatListToggleBtn = document.getElementById('p2pChatListToggleBtn');
+const p2pChatUsersWidget = document.getElementById('p2pChatUsersWidget');
+const p2pUsersListContainer = document.getElementById('p2pUsersList');
+
+
 const logoLightSrc = 'logo_light.png';
 const logoDarkSrc = 'logo_dark.png';
 
@@ -45,7 +62,7 @@ const translations = {
         lightMode: "Mode Terang",
         logout: "Keluar",
         loginTitle: "Nameless",
-        loginSubtitle: "Express Yourself Freely, Anonymously", // <<< PERUBAHAN DI SINI
+        loginSubtitle: "Express Yourself Freely, Anonymously",
         postPlaceholder: "Apa yang ingin kamu bagikan hari ini? Ceritakan perasaanmu dengan bebas dan aman di sini...",
         share: "Bagikan",
         all: "Semua",
@@ -99,127 +116,9 @@ const translations = {
         resourcesContent: `<p>Halaman <strong>Sumber Bantuan</strong> ini didedikasikan untuk menyediakan informasi dan kontak yang mungkin berguna bagi Anda dalam perjalanan kesehatan mental Anda.</p><p><strong>Penting:</strong> Nameless adalah platform untuk berbagi dan dukungan komunitas, bukan pengganti bantuan profesional. Jika Anda atau seseorang yang Anda kenal mengalami krisis atau membutuhkan bantuan segera, harap hubungi layanan darurat lokal atau profesional kesehatan mental yang terkualifikasi.</p><h4>Direktori Sumber Daya (Nasional & Internasional):</h4><ul><li><strong>Layanan Konseling Profesional Online:</strong> Platform seperti BetterHelp, Talkspace, atau layanan lokal terverifikasi di negara Anda dapat menghubungkan Anda dengan psikolog berlisensi.</li><li><strong>Hotline Kesehatan Mental Nasional Indonesia:</strong> Layanan Sejiwa (119 ekstensi 8) siap memberikan dukungan emosional awal. Untuk negara lain, carilah hotline resmi yang tersedia.</li><li><strong>Organisasi Kesehatan Dunia (WHO):</strong> Menyediakan informasi global dan panduan mengenai kesehatan mental.</li><li><strong>Asosiasi Psikologi Lokal:</strong> HIMPSI (Himpunan Psikologi Indonesia) atau asosiasi serupa di negara Anda dapat menjadi sumber informasi kredibel.</li><li><strong>Komunitas Dukungan Spesifik:</strong> Banyak organisasi yang fokus pada isu spesifik seperti depresi (misalnya, Depression and Bipolar Support Alliance - DBSA), kecemasan (misalnya, Anxiety & Depression Association of America - ADAA), atau dukungan untuk penyintas trauma.</li></ul><p>Kami terus berupaya memperbarui dan memverifikasi direktori sumber daya ini. Jika Anda mengetahui sumber daya lain yang bermanfaat dan kredibel, silakan informasikan kepada kami melalui halaman "Hubungi CS".</p>`,
         guidelinesContent: `<p>Selamat datang di <strong>Panduan Komunitas Nameless</strong>. Untuk menjaga platform ini tetap menjadi ruang yang aman, positif, dan mendukung bagi semua pengguna, kami meminta Anda untuk membaca dan mematuhi panduan berikut dengan saksama. Pelanggaran terhadap panduan ini dapat mengakibatkan penghapusan konten atau penangguhan akun.</p><ol><li><strong>Hormati Sesama Pengguna:</strong><ul><li>Perlakukan semua orang dengan hormat, kebaikan, dan empati. Sampaikan perbedaan pendapat secara konstruktif.</li><li>Perundungan (bullying), pelecehan, intimidasi, ujaran kebencian (hate speech) dalam bentuk apapun tidak akan ditoleransi.</li><li>Jangan mengirim pesan yang mengancam, menghina, atau merendahkan pengguna lain.</li></ul></li><li><strong>Jaga Anonimitas dan Privasi:</strong><ul><li>Nameless adalah platform anonim. Jangan mencoba mengungkap, meminta, atau membagikan informasi identitas pribadi (PII) diri Anda maupun pengguna lain.</li><li>Hormati privasi orang lain. Jangan membagikan konten atau percakapan pribadi tanpa izin.</li></ul></li><li><strong>Konten yang Sesuai dan Bertanggung Jawab:</strong><ul><li>Dilarang keras memposting konten ilegal, pornografi, kekerasan eksplisit, atau konten yang mempromosikan/mengglorifikasi tindakan menyakiti diri sendiri atau orang lain.</li><li>Hindari spamming, flooding, atau promosi komersial yang tidak relevan.</li><li>Gunakan peringatan konten (Content Warning/Trigger Warning) jika berbagi tentang topik yang berpotensi sensitif atau mengganggu.</li><li>Jangan menyebarkan misinformasi atau disinformasi, terutama terkait isu kesehatan.</li></ul></li><li><strong>Berkontribusi Secara Positif:</strong><ul><li>Bagikan cerita, pengalaman, dan perasaan Anda dengan jujur dan bertanggung jawab.</li><li>Berikan dukungan yang membangun dan tidak menghakimi.</li><li>Gunakan fitur laporan untuk menandai konten atau perilaku yang melanggar panduan.</li></ul></li><li><strong>Batasan Platform:</strong><ul><li>Nameless adalah platform dukungan sebaya, bukan pengganti bantuan profesional. Jika Anda dalam krisis, segera hubungi ahli atau layanan darurat.</li><li>Moderator berhak mengambil tindakan yang diperlukan untuk menegakkan panduan ini.</li></ul></li></ol><p>Mari bersama-sama menciptakan lingkungan yang aman dan suportif di Nameless. Terima kasih!</p>`,
         aboutContent: `<p><strong>Tentang Nameless: Ruang Aman Anda untuk Berbagi Perasaan</strong></p><p>Nameless adalah platform anonim yang didedikasikan untuk kesehatan mental dan dukungan emosional. Kami percaya bahwa setiap individu berhak memiliki tempat yang aman untuk mengekspresikan diri, berbagi pengalaman, dan menemukan koneksi tanpa rasa takut akan penghakiman.</p><h4>Misi Kami</h4><p>Misi utama Nameless adalah untuk <strong>menciptakan dan memelihara komunitas global yang suportif, empatik, dan memberdayakan</strong>. Kami berupaya untuk:</p><ul><li>Menyediakan platform yang aman, anonim, dan mudah diakses bagi siapa saja untuk berbagi perjalanan emosional mereka.</li><li>Mendorong interaksi yang positif dan konstruktif yang dapat membantu mengurangi perasaan terisolasi.</li><li>Meningkatkan kesadaran dan pemahaman mengenai berbagai aspek kesehatan mental.</li><li>Menyediakan informasi mengenai sumber bantuan profesional bagi mereka yang membutuhkannya.</li></ul><h4>Nilai-Nilai Inti Kami</h4><ul><li><strong>Anonimitas & Privasi:</strong> Perlindungan identitas pengguna adalah prioritas tertinggi kami.</li><li><strong>Empati & Dukungan:</strong> Kami mendorong budaya saling mendengarkan dan memberikan dukungan yang tulus.</li><li><strong>Keamanan & Kepercayaan:</strong> Kami berkomitmen menjaga platform bebas dari konten berbahaya dan perilaku negatif.</li><li><strong>Inklusivitas:</strong> Nameless adalah ruang untuk semua orang, tanpa memandang latar belakang.</li></ul><h4>Teknologi & Tim</h4><p>Nameless dikembangkan menggunakan teknologi terkini untuk memastikan pengalaman pengguna yang lancar dan aman. Tim kami terdiri dari individu-individu yang bersemangat tentang kesehatan mental dan pembangunan komunitas. Kami bekerja sama dengan para ahli untuk memastikan platform kami mengikuti praktik terbaik dalam dukungan emosional dan keamanan data.</p><p>Kami terus berinovasi dan menambahkan fitur baru berdasarkan masukan dari komunitas. Tujuan kami adalah menjadikan Nameless sebagai sumber daya yang berharga dan tepercaya bagi siapa saja yang mencari ruang untuk berbagi dan didengarkan.</p><p>Terima kasih telah menjadi bagian dari perjalanan Nameless. Kontribusi Anda membuat perbedaan.</p>`,
-        statsContent: `
-                <p>Halaman <strong>Statistik Pengguna</strong> Anda menyajikan analisis mendalam mengenai aktivitas dan interaksi Anda di Nameless. Data ini diperbarui secara berkala untuk memberikan Anda wawasan terbaru. (Fitur Eksklusif Pengguna Premium)</p>
-                
-                <div class="stats-section">
-                    <h4>Ringkasan Aktivitas Umum</h4>
-                    <ul class="stats-list">
-                        <li><span>Total Postingan Dibuat:</span> <strong class="stats-value">138</strong></li>
-                        <li><span>Total Komentar Diberikan:</span> <strong class="stats-value">412</strong></li>
-                        <li><span>Rata-rata Postingan per Minggu:</span> <strong class="stats-value">4.2</strong></li>
-                        <li><span>Bergabung Sejak:</span> <strong class="stats-value">15 Februari 2024</strong></li>
-                        <li><span>Hari Paling Aktif Berbagi:</span> <strong class="stats-value">Sabtu</strong></li>
-                    </ul>
-                </div>
-
-                <div class="stats-section">
-                    <h4>Analisis Sentimen Postingan Anda</h4>
-                    <p><em>Berdasarkan analisis teks postingan Anda, berikut adalah distribusi sentimen umum:</em></p>
-                    <div class="sentiment-chart-placeholder" style="border:1px solid var(--border-light); padding:15px; margin-top:10px; text-align:center; background-color:var(--hover-bg-light);">
-                        <p style="margin:5px 0;"><strong>Sentimen Positif:</strong> 45% (62 postingan)</p>
-                        <div style="background-color: var(--color-green); height: 20px; width: 45%; margin: 2px 0; border-radius: 3px;"></div>
-                        <p style="margin:5px 0;"><strong>Sentimen Negatif:</strong> 30% (41 postingan)</p>
-                        <div style="background-color: var(--color-red); height: 20px; width: 30%; margin: 2px 0; border-radius: 3px;"></div>
-                        <p style="margin:5px 0;"><strong>Sentimen Netral:</strong> 25% (35 postingan)</p>
-                        <div style="background-color: #ccc; height: 20px; width: 25%; margin: 2px 0; border-radius: 3px;"></div>
-                        <small>Analisis ini bertujuan untuk refleksi dan dapat membantu Anda memahami tema emosional dalam tulisan Anda.</small>
-                    </div>
-                </div>
-
-                <div class="stats-section">
-                    <h4>Tag Paling Sering Anda Gunakan</h4>
-                    <ol class="ranked-list">
-                        <li>#curhat_dalam (65 kali)</li>
-                        <li>#refleksi_diri (42 kali)</li>
-                        <li>#dukungan_mental (38 kali)</li>
-                        <li>#tantangan_hidup (25 kali)</li>
-                        <li>#harapan_baru (18 kali)</li>
-                    </ol>
-                </div>
-
-                <div class="stats-section">
-                    <h4>Interaksi pada Postingan Anda</h4>
-                    <ul class="stats-list">
-                        <li><span>Total Reaksi ❤️ (Suka) Diterima:</span> <strong class="stats-value">1.205</strong></li>
-                        <li><span>Total Reaksi 🤗 (Pelukan) Diterima:</span> <strong class="stats-value">1.530</strong></li>
-                        <li><span>Rata-rata Reaksi per Postingan:</span> <strong class="stats-value">19.8</strong></li>
-                        <li><span>Postingan Paling Banyak Interaksi:</span> <strong class="stats-value">"Mengatasi Rasa Kesepian di Tengah Keramaian"</strong> (ID: P078)</li>
-                    </ul>
-                </div>
-                
-                <p style="margin-top:25px; font-size:0.9em; text-align:center;"><em>Statistik ini dirancang untuk membantu Anda memahami lebih dalam perjalanan Anda di Nameless.</em></p>`,
+        statsContent: `<p>Halaman <strong>Statistik Pengguna</strong> Anda menyajikan analisis mendalam mengenai aktivitas dan interaksi Anda di Nameless. Data ini diperbarui secara berkala untuk memberikan Anda wawasan terbaru. (Fitur Eksklusif Pengguna Premium)</p><div class="stats-section"><h4>Ringkasan Aktivitas Umum</h4><ul class="stats-list"><li><span>Total Postingan Dibuat:</span> <strong class="stats-value">138</strong></li><li><span>Total Komentar Diberikan:</span> <strong class="stats-value">412</strong></li><li><span>Rata-rata Postingan per Minggu:</span> <strong class="stats-value">4.2</strong></li><li><span>Bergabung Sejak:</span> <strong class="stats-value">15 Februari 2024</strong></li><li><span>Hari Paling Aktif Berbagi:</span> <strong class="stats-value">Sabtu</strong></li></ul></div><div class="stats-section"><h4>Analisis Sentimen Postingan Anda</h4><p><em>Berdasarkan analisis teks postingan Anda, berikut adalah distribusi sentimen umum:</em></p><div class="sentiment-chart-placeholder" style="border:1px solid var(--border-light); padding:15px; margin-top:10px; text-align:center; background-color:var(--hover-bg-light);"><p style="margin:5px 0;"><strong>Sentimen Positif:</strong> 45% (62 postingan)</p><div style="background-color: var(--color-green); height: 20px; width: 45%; margin: 2px 0; border-radius: 3px;"></div><p style="margin:5px 0;"><strong>Sentimen Negatif:</strong> 30% (41 postingan)</p><div style="background-color: var(--color-red); height: 20px; width: 30%; margin: 2px 0; border-radius: 3px;"></div><p style="margin:5px 0;"><strong>Sentimen Netral:</strong> 25% (35 postingan)</p><div style="background-color: #ccc; height: 20px; width: 25%; margin: 2px 0; border-radius: 3px;"></div><small>Analisis ini bertujuan untuk refleksi dan dapat membantu Anda memahami tema emosional dalam tulisan Anda.</small></div></div><div class="stats-section"><h4>Tag Paling Sering Anda Gunakan</h4><ol class="ranked-list"><li>#curhat_dalam (65 kali)</li><li>#refleksi_diri (42 kali)</li><li>#dukungan_mental (38 kali)</li><li>#tantangan_hidup (25 kali)</li><li>#harapan_baru (18 kali)</li></ol></div><div class="stats-section"><h4>Interaksi pada Postingan Anda</h4><ul class="stats-list"><li><span>Total Reaksi ❤️ (Suka) Diterima:</span> <strong class="stats-value">1.205</strong></li><li><span>Total Reaksi 🤗 (Pelukan) Diterima:</span> <strong class="stats-value">1.530</strong></li><li><span>Rata-rata Reaksi per Postingan:</span> <strong class="stats-value">19.8</strong></li><li><span>Postingan Paling Banyak Interaksi:</span> <strong class="stats-value">"Mengatasi Rasa Kesepian di Tengah Keramaian"</strong> (ID: P078)</li></ul></div><p style="margin-top:25px; font-size:0.9em; text-align:center;"><em>Statistik ini dirancang untuk membantu Anda memahami lebih dalam perjalanan Anda di Nameless.</em></p>`,
         explorePremiumContent: `<h2>Unlock Pengalaman Terbaik dengan Nameless Premium!</h2><p>Dapatkan akses ke fitur-fitur eksklusif yang dirancang untuk memperkaya perjalanan Anda dalam berbagi dan mendapatkan dukungan di Nameless.</p><h3>Manfaat Utama Berlangganan Premium:</h3><ul><li><strong>📊 Analitik Postingan Pribadi Mendalam:</strong> Akses halaman statistik lengkap untuk memahami pola berbagi, sentimen, dan interaksi Anda secara detail.</li><li><strong>🎨 Tema Aplikasi Eksklusif:</strong> Personalisasi tampilan aplikasi Nameless dengan beragam pilihan tema premium yang dirancang untuk kenyamanan visual Anda.</li><li><strong>👑 Badge Profil Premium:</strong> Tunjukkan dukungan Anda terhadap komunitas dan dapatkan badge khusus yang membedakan Anda.</li><li><strong>📝 Pilihan Font Lanjutan:</strong> Kustomisasi tampilan teks postingan Anda dengan pilihan font yang lebih beragam untuk ekspresi diri yang lebih personal dan unik.</li><li><strong>🤫 Mode Penyamaran Super:</strong> Fitur privasi tambahan yang memberikan lapisan keamanan ekstra saat Anda ingin berbagi hal yang sangat sensitif.</li><li><strong>🚀 Akses Lebih Awal ke Fitur Baru:</strong> Jadilah yang pertama mencoba inovasi dan fitur-fitur terbaru yang kami kembangkan khusus untuk pengguna Premium.</li><li><strong>🖼️ Unggah Gambar Berkualitas Tinggi (Rencana):</strong> Bagikan cerita Anda dengan dukungan visual yang lebih baik.</li><li><strong>🚫 Pengalaman Bebas Iklan Sepenuhnya:</strong> Nikmati Nameless tanpa gangguan iklan apapun, memungkinkan fokus penuh pada berbagi dan membaca.</li></ul><p>Dengan berlangganan Premium, Anda tidak hanya meningkatkan pengalaman pribadi Anda, tetapi juga secara langsung mendukung operasional, pemeliharaan, dan pengembangan berkelanjutan platform Nameless. Bantuan Anda memastikan kami dapat terus menyediakan ruang aman ini bagi jutaan orang yang membutuhkannya.</p><p style="margin-top: 20px; text-align:center;"><button class="premium-unlock-btn" id="upgradeToPremiumBtnPageExplore">Upgrade ke Akun Premium Sekarang!</button></p>`,
-        settingsContent: `
-                <div class="settings-section">
-                    <h4>Preferensi Akun</h4>
-                    <div class="setting-item">
-                        <label for="profileUsername">Nama Pengguna (Alias):</label>
-                        <input type="text" id="profileUsername" value="PenggunaAnonim734" disabled style="background:#eee; cursor:not-allowed;"> <small>Tidak dapat diubah untuk menjaga anonimitas.</small>
-                    </div>
-                    <div class="setting-item">
-                        <label for="profileEmail">Email Terhubung:</label>
-                        <input type="email" id="profileEmail" value="anda******@example.com" disabled style="background:#eee; cursor:not-allowed;">
-                        <button class="setting-btn-inline" onclick="alert('Fungsi ubah email akan segera tersedia.')">Ubah Email</button>
-                    </div>
-                     <div class="setting-item">
-                        <label for="profilePassword">Kata Sandi:</label>
-                        <button class="setting-btn" onclick="alert('Fungsi ubah kata sandi akan segera tersedia.')">Ubah Kata Sandi</button>
-                    </div>
-                </div>
-
-                <div class="settings-section">
-                    <h4>Notifikasi</h4>
-                    <div class="setting-item-toggle">
-                        <span>Notifikasi Komentar Baru pada Postingan Saya:</span>
-                        <label class="switch"><input type="checkbox" checked onchange="alert('Pengaturan notifikasi disimpan')"><span class="slider round"></span></label>
-                    </div>
-                    <div class="setting-item-toggle">
-                        <span>Notifikasi Reaksi Baru pada Postingan Saya:</span>
-                        <label class="switch"><input type="checkbox" checked onchange="alert('Pengaturan notifikasi disimpan')"><span class="slider round"></span></label>
-                    </div>
-                    <div class="setting-item-toggle">
-                        <span>Notifikasi Email untuk Pengumuman Penting:</span>
-                        <label class="switch"><input type="checkbox" onchange="alert('Pengaturan notifikasi disimpan')"><span class="slider round"></span></label>
-                    </div>
-                </div>
-                
-                <div class="settings-section">
-                    <h4>Preferensi Tampilan</h4>
-                    <div class="setting-item-toggle">
-                        <span>Mode Gelap Otomatis (Mengikuti Sistem):</span>
-                        <label class="switch"><input type="checkbox" onchange="alert('Pengaturan mode gelap disimpan. Untuk perubahan manual, gunakan tombol di menu utama.')"><span class="slider round"></span></label>
-                    </div>
-                     <div class="setting-item">
-                        <label for="fontSizeSelect">Ukuran Font Tampilan:</label>
-                        <select id="fontSizeSelect" class="setting-select" onchange="alert('Ukuran font diubah ke: ' + this.value)">
-                            <option value="kecil">Kecil</option>
-                            <option value="normal" selected>Normal</option>
-                            <option value="besar">Besar</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="settings-section">
-                    <h4>Privasi & Keamanan</h4>
-                    <div class="setting-item">
-                        <button class="setting-btn" onclick="alert('Fungsi kelola sesi aktif akan menampilkan perangkat yang terhubung.')">Kelola Sesi Aktif</button>
-                    </div>
-                     <div class="setting-item">
-                        <button class="setting-btn" onclick="alert('Fungsi autentikasi dua faktor (2FA) akan segera tersedia untuk meningkatkan keamanan akun Anda.')">Aktifkan Autentikasi Dua Faktor (2FA)</button>
-                    </div>
-                </div>
-
-                <div class="settings-section">
-                    <h4>Manajemen Data</h4>
-                     <div class="setting-item">
-                        <button class="setting-btn" onclick="alert('Permintaan ekspor data Anda sedang diproses. Anda akan menerima email dalam beberapa jam dengan tautan unduhan.')">Ekspor Data Saya</button>
-                    </div>
-                    <div class="setting-item">
-                        <button class="setting-btn setting-btn-danger" onclick="confirm('Apakah Anda yakin ingin menghapus akun Anda secara permanen? Tindakan ini tidak dapat diurungkan.') ? alert('Akun Anda telah dijadwalkan untuk penghapusan.') : alert('Penghapusan akun dibatalkan.');">Hapus Akun Saya</button>
-                    </div>
-                </div>
-                <p style="font-size:0.9em; text-align:center; margin-top:20px;">Nameless versi 1.0.1</p>`,
+        settingsContent: `<div class="settings-section"><h4>Preferensi Akun</h4><div class="setting-item"><label for="profileUsername">Nama Pengguna (Alias):</label><input type="text" id="profileUsername" value="PenggunaAnonim734" disabled style="background:#eee; cursor:not-allowed;"> <small>Tidak dapat diubah untuk menjaga anonimitas.</small></div><div class="setting-item"><label for="profileEmail">Email Terhubung:</label><input type="email" id="profileEmail" value="anda******@example.com" disabled style="background:#eee; cursor:not-allowed;"><button class="setting-btn-inline" onclick="alert('Fungsi ubah email akan segera tersedia.')">Ubah Email</button></div><div class="setting-item"><label for="profilePassword">Kata Sandi:</label><button class="setting-btn" onclick="alert('Fungsi ubah kata sandi akan segera tersedia.')">Ubah Kata Sandi</button></div></div><div class="settings-section"><h4>Notifikasi</h4><div class="setting-item-toggle"><span>Notifikasi Komentar Baru pada Postingan Saya:</span><label class="switch"><input type="checkbox" checked onchange="alert('Pengaturan notifikasi disimpan')"><span class="slider round"></span></label></div><div class="setting-item-toggle"><span>Notifikasi Reaksi Baru pada Postingan Saya:</span><label class="switch"><input type="checkbox" checked onchange="alert('Pengaturan notifikasi disimpan')"><span class="slider round"></span></label></div><div class="setting-item-toggle"><span>Notifikasi Email untuk Pengumuman Penting:</span><label class="switch"><input type="checkbox" onchange="alert('Pengaturan notifikasi disimpan')"><span class="slider round"></span></label></div></div><div class="settings-section"><h4>Preferensi Tampilan</h4><div class="setting-item-toggle"><span>Mode Gelap Otomatis (Mengikuti Sistem):</span><label class="switch"><input type="checkbox" onchange="alert('Pengaturan mode gelap disimpan. Untuk perubahan manual, gunakan tombol di menu utama.')"><span class="slider round"></span></label></div><div class="setting-item"><label for="fontSizeSelect">Ukuran Font Tampilan:</label><select id="fontSizeSelect" class="setting-select" onchange="alert('Ukuran font diubah ke: ' + this.value)"><option value="kecil">Kecil</option><option value="normal" selected>Normal</option><option value="besar">Besar</option></select></div></div><div class="settings-section"><h4>Privasi & Keamanan</h4><div class="setting-item"><button class="setting-btn" onclick="alert('Fungsi kelola sesi aktif akan menampilkan perangkat yang terhubung.')">Kelola Sesi Aktif</button></div><div class="setting-item"><button class="setting-btn" onclick="alert('Fungsi autentikasi dua faktor (2FA) akan segera tersedia untuk meningkatkan keamanan akun Anda.')">Aktifkan Autentikasi Dua Faktor (2FA)</button></div></div><div class="settings-section"><h4>Manajemen Data</h4><div class="setting-item"><button class="setting-btn" onclick="alert('Permintaan ekspor data Anda sedang diproses. Anda akan menerima email dalam beberapa jam dengan tautan unduhan.')">Ekspor Data Saya</button></div><div class="setting-item"><button class="setting-btn setting-btn-danger" onclick="confirm('Apakah Anda yakin ingin menghapus akun Anda secara permanen? Tindakan ini tidak dapat diurungkan.') ? alert('Akun Anda telah dijadwalkan untuk penghapusan.') : alert('Penghapusan akun dibatalkan.');">Hapus Akun Saya</button></div></div><p style="font-size:0.9em; text-align:center; margin-top:20px;">Nameless versi 1.0.1</p>`,
         contactCSContent: `<p>Mengalami masalah, punya pertanyaan, atau ingin memberikan masukan tentang Nameless? Tim Customer Support kami siap membantu Anda!</p><p>Sebelum menghubungi kami, Anda mungkin ingin memeriksa halaman <a href="#" data-page-link="guidelines" class="text-link">Panduan Komunitas</a> atau <a href="#" data-page-link="about" class="text-link">Tentang Nameless</a> untuk informasi umum.</p><h4>Cara Menghubungi Kami:</h4><ul><li><strong>Email Langsung:</strong> Anda dapat mengirimkan email ke alamat dukungan kami di: <strong>support@namelessapp.dev</strong>. Usahakan untuk menyertakan detail sebanyak mungkin mengenai pertanyaan atau masalah Anda.</li><li><strong>Formulir Kontak Dalam Aplikasi:</strong> (Segera Hadir) Nantinya, Anda akan dapat mengisi formulir langsung dari sini untuk mengirimkan pertanyaan Anda.</li></ul><h4>Waktu Respons:</h4><p>Tim kami berusaha untuk merespons semua pertanyaan dan laporan dalam waktu <strong>1-2 hari kerja</strong>. Mohon kesabarannya, terutama pada periode dengan volume permintaan tinggi.</p><h4>Informasi yang Mungkin Membantu Kami:</h4><p>Jika Anda melaporkan masalah teknis, menyertakan informasi berikut dapat mempercepat proses penyelesaian:</p><ul><li>Deskripsi masalah yang detail dan jelas.</li><li>Langkah-langkah untuk mereplikasi masalah tersebut (jika ada).</li><li>Jenis perangkat (misalnya, Samsung Galaxy S22, iPhone 14 Pro) dan versi sistem operasi (misalnya, Android 13, iOS 16.5).</li><li>Versi browser (jika menggunakan versi web) atau versi aplikasi Nameless.</li><li>Screenshot atau rekaman video singkat dari masalah (jika memungkinkan dan tidak mengandung informasi sensitif).</li></ul><p>Terima kasih atas kesabaran dan kerja sama Anda. Kami berkomitmen untuk memberikan pengalaman terbaik di Nameless.</p>`,
         premiumFeatureLockTitle: "Statistik Pengguna Terkunci",
         premiumFeatureLockMessage: "Halaman Statistik Pengguna ini hanya dapat diakses oleh pengguna Premium. Upgrade akun Anda untuk mendapatkan wawasan mendalam tentang aktivitas Anda dan mendukung pengembangan Nameless!",
@@ -227,13 +126,31 @@ const translations = {
         navStats: "Statistik (Premium)",
         navExplorePremium: "Fitur Premium",
         navSettings: "Pengaturan",
+        // P2P Chat Translations
+        p2pWidgetTitle: "Pengguna Lain",
+        p2pChatWith: "Chat dengan Pengguna Anonim ",
+        p2pTypeMessagePlaceholder: "Ketik pesan anonim...",
+        p2pNoOtherUsers: "Tidak ada pengguna lain yang online saat ini.",
+        p2pUserOffline: "Pengguna ini tampaknya sudah offline.",
+        p2pSelfChatError: "Anda tidak bisa chat dengan diri sendiri.",
+        p2pChatWindowTitle: "Chat Antar Pengguna", // Judul untuk tombol di header
+        p2pUserListTitle: "Daftar Chat P2P", // Judul untuk widget daftar pengguna
+        p2pIsTypingSuffix: " sedang mengetik...",
+        p2pNewMessageFrom: "Pesan baru dari Pengguna Anonim ",
+        // Chat Support (jika masih dipakai)
+        chatTitle: "Chat Dukungan",
+        chatPlaceholder: "Ketik pesan...",
+        chatSend: "Kirim",
+        chatCloseTitle: "Tutup Chat",
+        chatDefaultReply: "Terima kasih atas pesan Anda! Tim kami akan segera merespons.",
+        chatTyping: "Dukungan sedang mengetik..."
     },
-    en: {
+    en: { // Harap lengkapi terjemahan Bahasa Inggris jika diperlukan
         darkMode: "Dark Mode",
         lightMode: "Light Mode",
         logout: "Logout",
         loginTitle: "Nameless",
-        loginSubtitle: "Express Yourself Freely, Anonymously", // <<< PERUBAHAN DI SINI JUGA (atau terjemahan Inggris yang sesuai)
+        loginSubtitle: "Express Yourself Freely, Anonymously",
         postPlaceholder: "What do you want to share today? Tell your feelings freely and safely here...",
         share: "Share",
         all: "All",
@@ -287,127 +204,9 @@ const translations = {
         resourcesContent: `<p>This <strong>Help Resources</strong> page is dedicated to providing information and contacts that may be useful for your mental health journey.</p><p><strong>Important:</strong> Nameless is a platform for sharing and community support, not a substitute for professional help. If you or someone you know is in crisis or needs immediate assistance, please contact local emergency services or a qualified mental health professional.</p><h4>Resource Directory (National & International):</h4><ul><li><strong>Professional Online Counseling Services:</strong> Platforms like BetterHelp, Talkspace, or verified local services in your country can connect you with licensed psychologists.</li><li><strong>National Mental Health Hotlines:</strong> Most countries have official mental health hotlines. For example, in the US, the National Suicide Prevention Lifeline is 988. Please find the official hotline for your country.</li><li><strong>World Health Organization (WHO):</strong> Provides global information and guidance on mental health.</li><li><strong>Local Psychological Associations:</strong> The American Psychological Association (APA) or similar associations in your country can be credible sources of information.</li><li><strong>Specific Support Communities:</strong> Many organizations focus on specific issues like depression (e.g., Depression and Bipolar Support Alliance - DBSA), anxiety (e.g., Anxiety & Depression Association of America - ADAA), or support for trauma survivors.</li></ul><p>We continuously work to update and verify this resource directory. If you know of other helpful and credible resources, please inform us via the "Contact CS" page.</p>`,
         guidelinesContent: `<p>Welcome to the <strong>Nameless Community Guidelines</strong>. To ensure this platform remains a safe, positive, and supportive space for all users, we ask you to read and adhere to the following guidelines carefully. Violations of these guidelines may result in content removal or account suspension.</p><ol><li><strong>Respect Fellow Users:</strong><ul><li>Treat everyone with respect, kindness, and empathy. Express differences of opinion constructively.</li><li>Bullying, harassment, intimidation, and hate speech in any form will not be tolerated.</li><li>Do not send threatening, insulting, or demeaning messages to other users.</li></ul></li><li><strong>Maintain Anonymity and Privacy:</strong><ul><li>Nameless is an anonymous platform. Do not attempt to reveal, request, or share Personally Identifiable Information (PII) of yourself or other users.</li><li>Respect others' privacy. Do not share private content or conversations without consent.</li></ul></li><li><strong>Appropriate and Responsible Content:</strong><ul><li>Posting illegal content, pornography, explicit violence, or content that promotes/glorifies self-harm or harm to others is strictly prohibited.</li><li>Avoid spamming, flooding, or irrelevant commercial promotions.</li><li>Use Content Warnings/Trigger Warnings when sharing potentially sensitive or disturbing topics.</li><li>Do not spread misinformation or disinformation, especially regarding health issues.</li></ul></li><li><strong>Contribute Positively:</strong><ul><li>Share your stories, experiences, and feelings honestly and responsibly.</li><li>Provide constructive and non-judgmental support.</li><li>Use the report feature to flag content or behavior that violates guidelines.</li></ul></li><li><strong>Platform Limitations:</strong><ul><li>Nameless is a peer support platform, not a substitute for professional help. If in crisis, contact experts or emergency services immediately.</li><li>Moderators reserve the right to take necessary actions to enforce these guidelines.</li></ul></li></ol><p>Let's together create a safe and supportive environment on Nameless. Thank you!</p>`,
         aboutContent: `<p><strong>About Nameless: Your Safe Space to Share Feelings</strong></p><p>Nameless is an anonymous platform dedicated to mental health and emotional support. We believe every individual deserves a safe place to express themselves, share experiences, and find connection without fear of judgment.</p><h4>Our Mission</h4><p>The primary mission of Nameless is to <strong>create and maintain a supportive, empathetic, and empowering global anonymous community</strong>. We strive to:</p><ul><li>Provide a safe, anonymous, and accessible platform for anyone to share their emotional journey.</li><li>Encourage positive and constructive interactions that can help reduce feelings of isolation.</li><li>Increase awareness and understanding of various aspects of mental health.</li><li>Provide information on professional help resources for those who need them.</li></ul><h4>Our Core Values</h4><ul><li><strong>Anonymity & Privacy:</strong> Protecting user identity is our highest priority.</li><li><strong>Empathy & Support:</strong> We foster a culture of listening and providing sincere support.</li><li><strong>Safety & Trust:</strong> We are committed to keeping the platform free from harmful content and negative behavior.</li><li><strong>Inclusivity:</strong> Nameless is a space for everyone, regardless of background.</li></ul><h4>Technology & Team</h4><p>Nameless is developed using modern technology to ensure a smooth and secure user experience. Our team consists of individuals passionate about mental health and community building. We collaborate with experts to ensure our platform follows best practices in emotional support and data security.</p><p>We continuously innovate and add new features based on community feedback. Our goal is to make Nameless a valuable and trusted resource for anyone seeking a space to share and be heard.</p><p>Thank you for being part of the Nameless journey. Your contribution makes a difference.</p>`,
-        statsContent: `
-                <p>Your <strong>User Statistics</strong> page provides an in-depth analysis of your activity and interactions on Nameless. This data is updated regularly to give you the latest insights. (Exclusive Premium User Feature)</p>
-                
-                <div class="stats-section">
-                    <h4>General Activity Summary</h4>
-                    <ul class="stats-list">
-                        <li><span>Total Posts Created:</span> <strong class="stats-value">138</strong></li>
-                        <li><span>Total Comments Given:</span> <strong class="stats-value">412</strong></li>
-                        <li><span>Average Posts per Week:</span> <strong class="stats-value">4.2</strong></li>
-                        <li><span>Joined Since:</span> <strong class="stats-value">February 15, 2024</strong></li>
-                        <li><span>Most Active Sharing Day:</span> <strong class="stats-value">Saturday</strong></li>
-                    </ul>
-                </div>
-
-                <div class="stats-section">
-                    <h4>Sentiment Analysis of Your Posts</h4>
-                    <p><em>Based on the text analysis of your posts, here's the general sentiment distribution:</em></p>
-                    <div class="sentiment-chart-placeholder" style="border:1px solid var(--border-light); padding:15px; margin-top:10px; text-align:center; background-color:var(--hover-bg-light);">
-                        <p style="margin:5px 0;"><strong>Positive Sentiment:</strong> 45% (62 posts)</p>
-                        <div style="background-color: var(--color-green); height: 20px; width: 45%; margin: 2px 0; border-radius: 3px;"></div>
-                        <p style="margin:5px 0;"><strong>Negative Sentiment:</strong> 30% (41 posts)</p>
-                        <div style="background-color: var(--color-red); height: 20px; width: 30%; margin: 2px 0; border-radius: 3px;"></div>
-                        <p style="margin:5px 0;"><strong>Neutral Sentiment:</strong> 25% (35 posts)</p>
-                        <div style="background-color: #ccc; height: 20px; width: 25%; margin: 2px 0; border-radius: 3px;"></div>
-                        <small>This analysis is for reflection and can help you understand emotional themes in your writing.</small>
-                    </div>
-                </div>
-
-                <div class="stats-section">
-                    <h4>Your Most Frequently Used Tags</h4>
-                    <ol class="ranked-list">
-                        <li>#deep_thoughts (65 times)</li>
-                        <li>#self_reflection (42 times)</li>
-                        <li>#mental_support (38 times)</li>
-                        <li>#life_challenges (25 times)</li>
-                        <li>#new_hope (18 times)</li>
-                    </ol>
-                </div>
-
-                <div class="stats-section">
-                    <h4>Interactions on Your Posts</h4>
-                    <ul class="stats-list">
-                        <li><span>Total ❤️ (Like) Reactions Received:</span> <strong class="stats-value">1,205</strong></li>
-                        <li><span>Total 🤗 (Hug) Reactions Received:</span> <strong class="stats-value">1,530</strong></li>
-                        <li><span>Average Reactions per Post:</span> <strong class="stats-value">19.8</strong></li>
-                        <li><span>Most Interacted Post:</span> <strong class="stats-value">"Overcoming Loneliness in a Crowd"</strong> (ID: P078)</li>
-                    </ul>
-                </div>
-                
-                <p style="margin-top:25px; font-size:0.9em; text-align:center;"><em>These statistics are designed to help you better understand your journey on Nameless.</em></p>`,
+        statsContent: `<p>Your <strong>User Statistics</strong> page provides an in-depth analysis of your activity and interactions on Nameless. This data is updated regularly to give you the latest insights. (Exclusive Premium User Feature)</p><div class="stats-section"><h4>General Activity Summary</h4><ul class="stats-list"><li><span>Total Posts Created:</span> <strong class="stats-value">138</strong></li><li><span>Total Comments Given:</span> <strong class="stats-value">412</strong></li><li><span>Average Posts per Week:</span> <strong class="stats-value">4.2</strong></li><li><span>Joined Since:</span> <strong class="stats-value">February 15, 2024</strong></li><li><span>Most Active Sharing Day:</span> <strong class="stats-value">Saturday</strong></li></ul></div><div class="stats-section"><h4>Sentiment Analysis of Your Posts</h4><p><em>Based on the text analysis of your posts, here's the general sentiment distribution:</em></p><div class="sentiment-chart-placeholder" style="border:1px solid var(--border-light); padding:15px; margin-top:10px; text-align:center; background-color:var(--hover-bg-light);"><p style="margin:5px 0;"><strong>Positive Sentiment:</strong> 45% (62 posts)</p><div style="background-color: var(--color-green); height: 20px; width: 45%; margin: 2px 0; border-radius: 3px;"></div><p style="margin:5px 0;"><strong>Negative Sentiment:</strong> 30% (41 posts)</p><div style="background-color: var(--color-red); height: 20px; width: 30%; margin: 2px 0; border-radius: 3px;"></div><p style="margin:5px 0;"><strong>Neutral Sentiment:</strong> 25% (35 posts)</p><div style="background-color: #ccc; height: 20px; width: 25%; margin: 2px 0; border-radius: 3px;"></div><small>This analysis is for reflection and can help you understand emotional themes in your writing.</small></div></div><div class="stats-section"><h4>Your Most Frequently Used Tags</h4><ol class="ranked-list"><li>#deep_thoughts (65 times)</li><li>#self_reflection (42 times)</li><li>#mental_support (38 times)</li><li>#life_challenges (25 times)</li><li>#new_hope (18 times)</li></ol></div><div class="stats-section"><h4>Interactions on Your Posts</h4><ul class="stats-list"><li><span>Total ❤️ (Like) Reactions Received:</span> <strong class="stats-value">1,205</strong></li><li><span>Total 🤗 (Hug) Reactions Received:</span> <strong class="stats-value">1,530</strong></li><li><span>Average Reactions per Post:</span> <strong class="stats-value">19.8</strong></li><li><span>Most Interacted Post:</span> <strong class="stats-value">"Overcoming Loneliness in a Crowd"</strong> (ID: P078)</li></ul></div><p style="margin-top:25px; font-size:0.9em; text-align:center;"><em>These statistics are designed to help you better understand your journey on Nameless.</em></p>`,
         explorePremiumContent: `<h2>Unlock the Best Nameless Experience with Premium!</h2><p>Gain access to exclusive features designed to enrich your sharing and support journey on Nameless.</p><h3>Key Benefits of Subscribing to Premium:</h3><ul><li><strong>📊 In-depth Personal Post Analytics:</strong> Access a comprehensive statistics page to understand your sharing patterns, sentiments, and interactions in detail.</li><li><strong>🎨 Exclusive App Themes:</strong> Personalize the Nameless app's appearance with a variety of premium themes designed for your visual comfort.</li><li><strong>👑 Premium Profile Badge:</strong> Showcase your support for the community and receive a special badge that distinguishes you.</li><li><strong>📝 Advanced Font Choices:</strong> Customize the look of your post text with a wider selection of fonts for more personal and unique self-expression.</li><li><strong>🤫 Super Incognito Mode:</strong> An additional privacy feature that provides an extra layer of security when you want to share highly sensitive matters.</li><li><strong>🚀 Early Access to New Features:</strong> Be the first to try innovations and the latest features we develop exclusively for Premium users.</li><li><strong>🖼️ High-Quality Image Uploads (Planned):</strong> Share your stories with better visual support.</li><li><strong>🚫 Completely Ad-Free Experience:</strong> Enjoy Nameless without any ad interruptions, allowing full focus on sharing and reading.</li></ul><p>By subscribing to Premium, you not only enhance your personal experience but also directly support the operation, maintenance, and continuous development of the Nameless platform. Your help ensures we can continue to provide this safe space for millions who need it.</p><p style="margin-top: 20px; text-align:center;"><button class="premium-unlock-btn" id="upgradeToPremiumBtnPageExplore">Upgrade to Premium Account Now!</button></p>`,
-        settingsContent: `
-                <div class="settings-section">
-                    <h4>Account Preferences</h4>
-                    <div class="setting-item">
-                        <label for="profileUsername">Username (Alias):</label>
-                        <input type="text" id="profileUsername" value="AnonymousUser734" disabled style="background:#eee; cursor:not-allowed;"> <small>Cannot be changed to maintain anonymity.</small>
-                    </div>
-                    <div class="setting-item">
-                        <label for="profileEmail">Connected Email:</label>
-                        <input type="email" id="profileEmail" value="you******@example.com" disabled style="background:#eee; cursor:not-allowed;">
-                        <button class="setting-btn-inline" onclick="alert('Change email functionality will be available soon.')">Change Email</button>
-                    </div>
-                     <div class="setting-item">
-                        <label for="profilePassword">Password:</label>
-                        <button class="setting-btn" onclick="alert('Change password functionality will be available soon.')">Change Password</button>
-                    </div>
-                </div>
-
-                <div class="settings-section">
-                    <h4>Notifications</h4>
-                    <div class="setting-item-toggle">
-                        <span>New Comments on My Posts:</span>
-                        <label class="switch"><input type="checkbox" checked onchange="alert('Notification settings saved')"><span class="slider round"></span></label>
-                    </div>
-                    <div class="setting-item-toggle">
-                        <span>New Reactions on My Posts:</span>
-                        <label class="switch"><input type="checkbox" checked onchange="alert('Notification settings saved')"><span class="slider round"></span></label>
-                    </div>
-                    <div class="setting-item-toggle">
-                        <span>Email Notifications for Important Announcements:</span>
-                        <label class="switch"><input type="checkbox" onchange="alert('Notification settings saved')"><span class="slider round"></span></label>
-                    </div>
-                </div>
-                
-                <div class="settings-section">
-                    <h4>Display Preferences</h4>
-                    <div class="setting-item-toggle">
-                        <span>Auto Dark Mode (Follow System):</span>
-                        <label class="switch"><input type="checkbox" onchange="alert('Dark mode settings saved. For manual changes, use the button in the main menu.')"><span class="slider round"></span></label>
-                    </div>
-                     <div class="setting-item">
-                        <label for="fontSizeSelect">Display Font Size:</label>
-                        <select id="fontSizeSelect" class="setting-select" onchange="alert('Font size changed to: ' + this.value)">
-                            <option value="small">Small</option>
-                            <option value="normal" selected>Normal</option>
-                            <option value="large">Large</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="settings-section">
-                    <h4>Privacy & Security</h4>
-                    <div class="setting-item">
-                        <button class="setting-btn" onclick="alert('Manage active sessions functionality will display connected devices.')">Manage Active Sessions</button>
-                    </div>
-                     <div class="setting-item">
-                        <button class="setting-btn" onclick="alert('Two-factor authentication (2FA) functionality will be available soon to enhance your account security.')">Enable Two-Factor Authentication (2FA)</button>
-                    </div>
-                </div>
-
-                <div class="settings-section">
-                    <h4>Data Management</h4>
-                     <div class="setting-item">
-                        <button class="setting-btn" onclick="alert('Your data export request is being processed. You will receive an email within a few hours with a download link.')">Export My Data</button>
-                    </div>
-                    <div class="setting-item">
-                        <button class="setting-btn setting-btn-danger" onclick="confirm('Are you sure you want to permanently delete your account? This action cannot be undone.') ? alert('Your account has been scheduled for deletion.') : alert('Account deletion cancelled.');">Delete My Account</button>
-                    </div>
-                </div>
-                <p style="font-size:0.9em; text-align:center; margin-top:20px;">Nameless Version 1.0.1</p>`,
+        settingsContent: `<div class="settings-section"><h4>Account Preferences</h4><div class="setting-item"><label for="profileUsername">Username (Alias):</label><input type="text" id="profileUsername" value="AnonymousUser734" disabled style="background:#eee; cursor:not-allowed;"> <small>Cannot be changed to maintain anonymity.</small></div><div class="setting-item"><label for="profileEmail">Connected Email:</label><input type="email" id="profileEmail" value="you******@example.com" disabled style="background:#eee; cursor:not-allowed;"><button class="setting-btn-inline" onclick="alert('Change email functionality will be available soon.')">Change Email</button></div><div class="setting-item"><label for="profilePassword">Password:</label><button class="setting-btn" onclick="alert('Change password functionality will be available soon.')">Change Password</button></div></div><div class="settings-section"><h4>Notifications</h4><div class="setting-item-toggle"><span>New Comments on My Posts:</span><label class="switch"><input type="checkbox" checked onchange="alert('Notification settings saved')"><span class="slider round"></span></label></div><div class="setting-item-toggle"><span>New Reactions on My Posts:</span><label class="switch"><input type="checkbox" checked onchange="alert('Notification settings saved')"><span class="slider round"></span></label></div><div class="setting-item-toggle"><span>Email Notifications for Important Announcements:</span><label class="switch"><input type="checkbox" onchange="alert('Notification settings saved')"><span class="slider round"></span></label></div></div><div class="settings-section"><h4>Display Preferences</h4><div class="setting-item-toggle"><span>Auto Dark Mode (Follow System):</span><label class="switch"><input type="checkbox" onchange="alert('Dark mode settings saved. For manual changes, use the button in the main menu.')"><span class="slider round"></span></label></div><div class="setting-item"><label for="fontSizeSelect">Display Font Size:</label><select id="fontSizeSelect" class="setting-select" onchange="alert('Font size changed to: ' + this.value)"><option value="small">Small</option><option value="normal" selected>Normal</option><option value="large">Large</option></select></div></div><div class="settings-section"><h4>Privacy & Security</h4><div class="setting-item"><button class="setting-btn" onclick="alert('Manage active sessions functionality will display connected devices.')">Manage Active Sessions</button></div><div class="setting-item"><button class="setting-btn" onclick="alert('Two-factor authentication (2FA) functionality will be available soon to enhance your account security.')">Enable Two-Factor Authentication (2FA)</button></div></div><div class="settings-section"><h4>Data Management</h4><div class="setting-item"><button class="setting-btn" onclick="alert('Your data export request is being processed. You will receive an email within a few hours with a download link.')">Export My Data</button></div><div class="setting-item"><button class="setting-btn setting-btn-danger" onclick="confirm('Are you sure you want to permanently delete your account? This action cannot be undone.') ? alert('Your account has been scheduled for deletion.') : alert('Account deletion cancelled.');">Delete My Account</button></div></div><p style="font-size:0.9em; text-align:center; margin-top:20px;">Nameless Version 1.0.1</p>`,
         contactCSContent: `<p>Experiencing issues, have questions, or want to provide feedback about Nameless? Our Customer Support team is ready to assist you!</p><p>Before contacting us, you might want to check our <a href="#" data-page-link="guidelines" class="text-link">Community Guidelines</a> or <a href="#" data-page-link="about" class="text-link">About Nameless</a> pages for general information.</p><h4>How to Reach Us:</h4><ul><li><strong>Direct Email:</strong> You can send an email to our support address at: <strong>support@namelessapp.dev</strong>. Please try to include as much detail as possible regarding your query or issue.</li><li><strong>In-App Contact Form:</strong> (Coming Soon) In the future, you will be able to fill out a form directly from here to submit your inquiries.</li></ul><h4>Response Time:</h4><p>Our team strives to respond to all inquiries and reports within <strong>1-2 business days</strong>. Please be patient, especially during periods of high request volume.</p><h4>Information That Might Help Us:</h4><p>If you are reporting a technical issue, including the following information can expedite the resolution process:</p><ul><li>A detailed and clear description of the problem.</li><li>Steps to replicate the issue (if applicable).</li><li>Device type (e.g., Samsung Galaxy S22, iPhone 14 Pro) and operating system version (e.g., Android 13, iOS 16.5).</li><li>Browser version (if using the web version) or Nameless app version.</li><li>A screenshot or short video recording of the issue (if possible and does not contain sensitive information).</li></ul><p>Thank you for your patience and cooperation. We are committed to providing the best experience on Nameless.</p>`,
         premiumFeatureLockTitle: "🔒 User Statistics Locked",
         premiumFeatureLockMessage: "This User Statistics page is only accessible to Premium users. Upgrade your account to get in-depth insights into your activity and support the development of Nameless!",
@@ -415,6 +214,24 @@ const translations = {
         navStats: "Statistics (Premium)",
         navExplorePremium: "Premium Features",
         navSettings: "Settings",
+        // P2P Chat Translations
+        p2pWidgetTitle: "Other Users",
+        p2pChatWith: "Chat with Anonymous User ",
+        p2pTypeMessagePlaceholder: "Type an anonymous message...",
+        p2pNoOtherUsers: "No other users currently online.",
+        p2pUserOffline: "This user seems to be offline.",
+        p2pSelfChatError: "You cannot chat with yourself.",
+        p2pChatWindowTitle: "P2P Chat", // Title for the header button
+        p2pUserListTitle: "P2P Chat List", // Title for the user list widget
+        p2pIsTypingSuffix: " is typing...",
+        p2pNewMessageFrom: "New message from Anonymous User ",
+        // Chat Support (if still used)
+        chatTitle: "Support Chat",
+        chatPlaceholder: "Type a message...",
+        chatSend: "Send",
+        chatCloseTitle: "Close Chat",
+        chatDefaultReply: "Thanks for your message! Our team will reply soon.",
+        chatTyping: "Support is typing..."
     }
 };
 
@@ -422,36 +239,40 @@ function updateTexts(lang) {
     const t = translations[lang];
     document.documentElement.lang = lang;
 
+    // Login Page
     if (document.querySelector('.login-title')) document.querySelector('.login-title').textContent = t.loginTitle;
     if (document.querySelector('.login-subtitle')) document.querySelector('.login-subtitle').textContent = t.loginSubtitle;
     if (document.getElementById('premiumLoginBtn')) document.getElementById('premiumLoginBtn').textContent = t.premiumLogin;
     if (document.querySelector('.login-form .login-btn')) document.querySelector('.login-form .login-btn').textContent = (lang === 'id' ? "Masuk" : "Login");
     if (guestBtn) guestBtn.textContent = (lang === 'id' ? "Lanjut sebagai Tamu" : "Continue as Guest");
 
+    // Header & Main App
     if (searchInput) searchInput.placeholder = t.searchPlaceholder;
     if (mainMenuBtn) mainMenuBtn.title = t.mainMenu;
 
+    // Post Form & Feed
     if (postContent) postContent.placeholder = t.postPlaceholder;
     if (submitPost) submitPost.textContent = t.share;
     document.querySelectorAll('.filter-btn').forEach(btn => {
         if (btn.dataset.filter === 'all') btn.textContent = t.all;
     });
 
-    if (navHome) navHome.querySelector('.nav-text').textContent = t.navHome;
-    if (navExplore) navExplore.querySelector('.nav-text').textContent = t.navExplore;
-    if (navStats) navStats.querySelector('.nav-text').textContent = t.navStats;
-    if (navExplorePremium) navExplorePremium.querySelector('.nav-text').textContent = t.navExplorePremium;
-    if (navResources) navResources.querySelector('.nav-text').textContent = t.navResources;
-    if (navGuidelines) navGuidelines.querySelector('.nav-text').textContent = t.navGuidelines;
-    if (navAbout) navAbout.querySelector('.nav-text').textContent = t.navAbout;
-    if (navSettings) navSettings.querySelector('.nav-text').textContent = t.navSettings;
+    // Sidebar Left Navigation
+    if (navHome && navHome.querySelector('.nav-text')) navHome.querySelector('.nav-text').textContent = t.navHome;
+    if (navExplore && navExplore.querySelector('.nav-text')) navExplore.querySelector('.nav-text').textContent = t.navExplore;
+    if (navStats && navStats.querySelector('.nav-text')) navStats.querySelector('.nav-text').textContent = t.navStats;
+    if (navExplorePremium && navExplorePremium.querySelector('.nav-text')) navExplorePremium.querySelector('.nav-text').textContent = t.navExplorePremium;
+    if (navResources && navResources.querySelector('.nav-text')) navResources.querySelector('.nav-text').textContent = t.navResources;
+    if (navGuidelines && navGuidelines.querySelector('.nav-text')) navGuidelines.querySelector('.nav-text').textContent = t.navGuidelines;
+    if (navAbout && navAbout.querySelector('.nav-text')) navAbout.querySelector('.nav-text').textContent = t.navAbout;
+    if (navSettings && navSettings.querySelector('.nav-text')) navSettings.querySelector('.nav-text').textContent = t.navSettings;
 
     const sidebarPostButton = document.getElementById('sidebarPostBtn');
-    if (sidebarPostButton) {
-        const textSpan = sidebarPostButton.querySelector('.nav-text');
-        if (textSpan) textSpan.textContent = t.sidebarPostBtn;
+    if (sidebarPostButton && sidebarPostButton.querySelector('.nav-text')) {
+        sidebarPostButton.querySelector('.nav-text').textContent = t.sidebarPostBtn;
     }
 
+    // Sidebar Right Widgets
     if (document.getElementById('widgetTitleTrending')) document.getElementById('widgetTitleTrending').textContent = t.widgetTitleTrending;
     if (document.getElementById('widgetTitlePrompt')) document.getElementById('widgetTitlePrompt').textContent = t.widgetTitlePrompt;
     if (document.getElementById('supportivePromptText1')) document.getElementById('supportivePromptText1').textContent = t.supportivePromptText1;
@@ -460,16 +281,42 @@ function updateTexts(lang) {
     if (document.getElementById('safeSpaceText1')) document.getElementById('safeSpaceText1').textContent = t.safeSpaceText1;
     if (communityGuidelinesLink) communityGuidelinesLink.textContent = t.communityGuidelinesLink;
 
+    // Empty State for Feed (akan di-override oleh renderPosts jika ada post)
     if (emptyStateTitle) emptyStateTitle.textContent = t.noPosts;
     if (emptyStateText) emptyStateText.textContent = t.beFirst;
 
+    // P2P Chat Elements
+    if (document.getElementById('p2pWidgetTitle')) document.getElementById('p2pWidgetTitle').textContent = t.p2pWidgetTitle;
+    if (p2pChatListToggleBtn) p2pChatListToggleBtn.title = t.p2pUserListTitle || t.p2pChatWindowTitle;
+
+    // Update open P2P chat window titles and placeholders
+    Object.values(openP2pChatWindows).forEach(chatWindow => {
+        const targetUserId = chatWindow.dataset.targetUserId;
+        if (chatWindow.querySelector('.p2p-chat-header-text')) {
+            chatWindow.querySelector('.p2p-chat-header-text').textContent = `${t.p2pChatWith}${targetUserId.substring(0, 5)}...`;
+        }
+        if (chatWindow.querySelector('.p2p-chat-input')) {
+            chatWindow.querySelector('.p2p-chat-input').placeholder = t.p2pTypeMessagePlaceholder;
+        }
+        if (chatWindow.querySelector('.p2p-chat-send-btn')) {
+            chatWindow.querySelector('.p2p-chat-send-btn').textContent = t.chatSend; // Menggunakan t.chatSend umum
+        }
+         if (chatWindow.querySelector('.p2p-chat-close-btn')) { // Menggunakan t.chatCloseTitle umum
+            chatWindow.querySelector('.p2p-chat-close-btn').title = t.chatCloseTitle;
+        }
+    });
+
+
     const activeNav = document.querySelector('.sidebar-left .nav-item.active');
     if (pageContentContainer && pageContentContainer.style.display === 'block' && activeNav) {
-        loadPageContent(activeNav.dataset.page, false); // false to prevent re-rendering posts if on home
+        loadPageContent(activeNav.dataset.page, false);
     } else if (mainFeedContainer && mainFeedContainer.style.display !== 'none') {
-        renderPosts(); // Re-render posts if on home page and language changes
+        renderPosts();
     }
-    buildMainMenu(); // Rebuild menu to reflect language changes
+    buildMainMenu();
+    if (currentUserId) { // Hanya update list P2P jika user sudah login/aktif
+      updateP2PUsersList();
+    }
 }
 
 
@@ -509,7 +356,7 @@ function buildMainMenu() {
                 if (lang && lang !== currentLang) {
                     currentLang = lang;
                     localStorage.setItem('appLanguage', lang);
-                    updateTexts(lang); // This will also call buildMainMenu
+                    updateTexts(lang);
                 }
                 newLangOptions.style.display = 'none';
             }
@@ -519,12 +366,31 @@ function buildMainMenu() {
         newDarkModeToggle.addEventListener('click', function() {
             document.body.classList.toggle('dark-mode');
             localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
-            updateDarkModeUI(); // This will call updateTexts which calls buildMainMenu
+            updateDarkModeUI();
             mainMenuDropdown.classList.remove('show');
         });
     }
     if (newLogoutBtn) {
         newLogoutBtn.addEventListener('click', function() {
+            if (currentUserId) {
+                localStorage.removeItem(P2P_USER_PREFIX + currentUserId);
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith(P2P_TYPING_PREFIX + currentUserId) || key.includes('_' + currentUserId + '_') ) { // Hapus status typing & pesan yang melibatkan user ini
+                        localStorage.removeItem(key);
+                    }
+                });
+            }
+            sessionStorage.removeItem('p2pUserId');
+            currentUserId = null;
+            // Tutup semua jendela chat P2P
+             Object.values(openP2pChatWindows).forEach(win => {
+                if (win && win.parentNode) win.parentNode.removeChild(win);
+            });
+            openP2pChatWindows = {};
+            p2pChatWindowPositions = [];
+            if(p2pChatUsersWidget) p2pChatUsersWidget.style.display = 'none';
+
+
             showLoginPage();
             mainMenuDropdown.classList.remove('show');
         });
@@ -567,7 +433,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (lightBg) document.documentElement.style.setProperty('--bg-light-rgb', hexToRgb(lightBg));
     if (redColor) document.documentElement.style.setProperty('--color-red-rgb', hexToRgb(redColor));
 
-    updateDarkModeUI(); // This calls updateTexts which calls buildMainMenu
+    // Pindahkan updateDarkModeUI dan addSamplePosts setelah DOM siap dan sebelum loadPageContent
+    updateDarkModeUI();
     addSamplePosts();
 
     const initialActiveNav = document.querySelector('.sidebar-left .nav-item.active');
@@ -577,6 +444,9 @@ document.addEventListener('DOMContentLoaded', function() {
         loadPageContent('home');
         if(navHome) navHome.classList.add('active');
     }
+
+    // P2P Chat Initialization - dipanggil setelah login/guest
+    // initializeP2PChat(); // Tidak dipanggil di sini lagi, tapi setelah login
 
     if (mainMenuBtn) {
         mainMenuBtn.addEventListener('click', function(e) {
@@ -597,8 +467,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    if (loginForm) loginForm.addEventListener('submit', function(e) { e.preventDefault(); showMainApp(); });
-    if (guestBtn) guestBtn.addEventListener('click', function() { showMainApp(); });
+    if (loginForm) loginForm.addEventListener('submit', function(e) { e.preventDefault(); showMainApp(); initializeP2PChat(); });
+    if (guestBtn) guestBtn.addEventListener('click', function() { showMainApp(); initializeP2PChat(); });
+
 
     document.querySelectorAll('.tag-btn').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -643,7 +514,7 @@ document.addEventListener('DOMContentLoaded', function() {
             };
             posts.unshift(newPost);
             postContent.value = '';
-            if(postContent.style) postContent.style.height = 'auto'; // Reset height
+            if(postContent.style) postContent.style.height = 'auto';
             selectedTag = '';
             document.querySelectorAll('.tag-btn').forEach(btn => btn.classList.remove('active'));
             renderPosts();
@@ -668,7 +539,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 navItems.forEach(nav => nav.classList.remove('active'));
                 if(navHome) navHome.classList.add('active');
             }
-            setTimeout(() => { // Ensure main feed is visible before focusing
+            setTimeout(() => {
                 postContent.focus();
                 window.scrollTo({ top: postContent.offsetTop - 100, behavior: 'smooth' });
             }, 50);
@@ -681,15 +552,15 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             if (e.target.tagName === 'A' && e.target.dataset.filterTag) {
                 const tagToFilter = e.target.dataset.filterTag;
-                loadPageContent('home'); // Switch to home/feed view
+                loadPageContent('home');
                 navItems.forEach(nav => nav.classList.remove('active'));
                 if(navHome) navHome.classList.add('active');
 
-                setTimeout(() => { // Ensure feed is rendered before clicking filter
+                setTimeout(() => {
                     const filterButton = document.querySelector(`.filter-btn[data-filter="${tagToFilter}"]`);
                     if (filterButton) {
                         filterButton.click();
-                    } else { // Fallback if a direct filter button for the trending tag doesn't exist
+                    } else {
                         currentFilter = tagToFilter;
                         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
                         renderPosts();
@@ -735,20 +606,19 @@ document.addEventListener('DOMContentLoaded', function() {
             isUserPremium = true;
             const currentPage = pageContentContainer.dataset.currentPage;
             if (currentPage && (currentPage === 'stats' || currentPage === 'explorePremium')) {
-                 loadPageContent(currentPage); // Reload current premium page to show content
+                 loadPageContent(currentPage);
             }
         }
     });
 
-    if (postContent) { // Ensure postContent exists
-        postContent.addEventListener('input', function() { autoResizeTextarea(this, 80); }); // 80px min-height for post textarea
-
-        // Ctrl+Enter or Cmd+Enter to submit post or comment
+    if (postContent) {
+        postContent.addEventListener('input', function() { autoResizeTextarea(this, 80); });
         document.addEventListener('keydown', function(e) {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            const activeChatInput = document.activeElement && (document.activeElement.classList.contains('p2p-chat-input') || document.activeElement.id === 'chatSupportInput');
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !activeChatInput) { // Hanya submit post/komen jika bukan di input chat
                 if (document.activeElement === postContent && submitPost) { submitPost.click(); }
                 else if (document.activeElement && document.activeElement.classList.contains('comment-input')) {
-                    const postId = document.activeElement.id.split('-')[2]; // Assuming ID is comment-input-POSTID
+                    const postId = document.activeElement.id.split('-')[2];
                     if (postId) {
                         addComment(parseInt(postId));
                     }
@@ -757,34 +627,64 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Button press effect
     document.addEventListener('click', function(e) {
-        if (e.target.matches('.login-btn, .guest-btn, .submit-btn, .premium-btn-login, .sidebar-post-btn, .comment-submit-btn, .premium-unlock-btn, .setting-btn, .setting-btn-inline, .setting-btn-danger')) {
+        if (e.target.matches('.login-btn, .guest-btn, .submit-btn, .premium-btn-login, .sidebar-post-btn, .comment-submit-btn, .premium-unlock-btn, .setting-btn, .setting-btn-inline, .setting-btn-danger, .p2p-chat-send-btn, #chatSupportSendBtn')) {
             e.target.style.transform = 'scale(0.98)';
             setTimeout(() => { e.target.style.transform = ''; }, 150);
         }
     });
 
-});
+    // P2P Chat UI Listeners
+    if (p2pChatListToggleBtn) {
+        p2pChatListToggleBtn.addEventListener('click', () => {
+            if (p2pChatUsersWidget) {
+                const isOpen = p2pChatUsersWidget.style.display === 'block';
+                p2pChatUsersWidget.style.display = isOpen ? 'none' : 'block';
+                if (!isOpen && currentUserId) { // Hanya update jika user sudah login/aktif
+                    updateP2PUsersList();
+                }
+            }
+        });
+    }
+    window.addEventListener('storage', handleStorageEventP2P);
+
+    window.addEventListener('beforeunload', () => {
+        if (currentUserId) {
+            localStorage.removeItem(P2P_USER_PREFIX + currentUserId);
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith(P2P_TYPING_PREFIX + currentUserId)) {
+                    localStorage.removeItem(key);
+                }
+            });
+        }
+    });
+
+}); // End of DOMContentLoaded
+
+// ... (Fungsi showMainApp, showLoginPage, updateDarkModeUI, addSamplePosts, renderPosts, dll.) ...
+// Pastikan fungsi-fungsi ini tidak terduplikasi dan menggunakan versi terakhir yang benar.
 
 function showMainApp() {
     if (loginPage) loginPage.style.display = 'none';
     if (mainAppWrapper) mainAppWrapper.style.display = 'flex';
     const activeNav = document.querySelector('.sidebar-left .nav-item.active');
     loadPageContent(activeNav ? activeNav.dataset.page : 'home');
-    if(!activeNav && navHome) navHome.classList.add('active'); // Default to home if no active nav
+    if(!activeNav && navHome) navHome.classList.add('active');
     updateDarkModeUI();
+    // P2P Chat sudah diinisialisasi setelah login/guest via event listener di loginForm dan guestBtn
 }
+
 function showLoginPage() {
     if (loginPage) loginPage.style.display = 'flex';
     if (mainAppWrapper) mainAppWrapper.style.display = 'none';
+    if (p2pChatUsersWidget) p2pChatUsersWidget.style.display = 'none'; // Sembunyikan widget P2P
 }
 
 function updateDarkModeUI() {
     const isDark = document.body.classList.contains('dark-mode');
     if (loginLogo) loginLogo.src = isDark ? logoDarkSrc : logoLightSrc;
     if (mainAppLogo) mainAppLogo.src = isDark ? logoDarkSrc : logoLightSrc;
-    updateTexts(currentLang); // This will also call buildMainMenu
+    updateTexts(currentLang);
 }
 
 function addSamplePosts() {
@@ -897,7 +797,7 @@ function addComment(postId) {
     if (post) {
         post.comments.push({ text: text, time: new Date() });
         commentInput.value = '';
-        commentInput.style.height = 'auto'; // Reset height after submit
+        commentInput.style.height = 'auto';
         renderPosts();
     }
 }
@@ -913,7 +813,7 @@ function formatTime(timeInput) {
     const days = Math.floor(hours / 24);
 
     if (seconds < 5) return langFormat.justNow;
-    if (seconds < 60) return langFormat.justNow; // Changed from "seconds < 60) return `${seconds} detik yang lalu`
+    if (seconds < 60) return langFormat.justNow;
     if (minutes === 1) return `1${langFormat.minuteAgo}`;
     if (minutes < 60) return `${minutes}${langFormat.minutesAgo}`;
     if (hours === 1) return `1${langFormat.hourAgo}`;
@@ -922,9 +822,16 @@ function formatTime(timeInput) {
     return `${days}${langFormat.daysAgo}`;
 }
 
-function autoResizeTextarea(textarea, minHeight = 40) { // Default minHeight 40px for comments
+function autoResizeTextarea(textarea, minHeight = 40, maxHeight = null) {
     textarea.style.height = 'auto';
-    textarea.style.height = Math.max(minHeight, textarea.scrollHeight) + 'px';
+    let newHeight = Math.max(minHeight, textarea.scrollHeight);
+    if (maxHeight && newHeight > maxHeight) {
+        newHeight = maxHeight;
+        textarea.style.overflowY = 'auto';
+    } else {
+        textarea.style.overflowY = 'hidden';
+    }
+    textarea.style.height = newHeight + 'px';
 }
 
 function loadPageContent(page, doRenderPosts = true) {
@@ -932,8 +839,8 @@ function loadPageContent(page, doRenderPosts = true) {
     if (mainFeedContainer) mainFeedContainer.style.display = 'none';
     if (pageContentContainer) {
         pageContentContainer.style.display = 'none';
-        pageContentContainer.innerHTML = ''; // Clear previous content
-        pageContentContainer.dataset.currentPage = page; // Store current page for premium logic
+        pageContentContainer.innerHTML = '';
+        pageContentContainer.dataset.currentPage = page;
     }
 
     if (page === 'home') {
@@ -951,11 +858,8 @@ function loadPageContent(page, doRenderPosts = true) {
             switch(page) {
                 case 'explore': titleKey = 'pageTitleExplore'; contentKey = 'exploreContent'; break;
                 case 'stats':
-                    titleKey = 'pageTitleStats';
-                    contentKey = 'statsContent';
-                    isPremiumPage = true;
-                    customLockTitle = t.premiumFeatureLockTitle;
-                    customLockMessage = t.premiumFeatureLockMessage;
+                    titleKey = 'pageTitleStats'; contentKey = 'statsContent'; isPremiumPage = true;
+                    customLockTitle = t.premiumFeatureLockTitle; customLockMessage = t.premiumFeatureLockMessage;
                     break;
                 case 'explorePremium': titleKey = 'pageTitleExplorePremium'; contentKey = 'explorePremiumContent'; break;
                 case 'resources': titleKey = 'pageTitleResources'; contentKey = 'resourcesContent'; break;
@@ -970,20 +874,435 @@ function loadPageContent(page, doRenderPosts = true) {
 
             const title = t[titleKey];
             const contentHTML = t[contentKey];
-
             pageContentContainer.innerHTML = `<h2>${title}</h2><div class="page-actual-content">${contentHTML}</div>`;
 
             if (isPremiumPage && !isUserPremium) {
                 const pageActualContent = pageContentContainer.querySelector('.page-actual-content');
                 if (pageActualContent) {
                      pageActualContent.innerHTML = `
-                        <div class="premium-lock-overlay-fullpage"> {/* Changed class for consistent styling */}
+                        <div class="premium-lock-overlay-fullpage">
                             <div class="lock-icon">🔒</div>
                             <h3>${customLockTitle}</h3>
                             <p>${customLockMessage}</p>
                             <button class="premium-unlock-btn" id="upgradeToPremiumBtnLock">${t.becomePremium}</button>
                         </div>`;
                 }
+            }
+        }
+    }
+}
+
+// --- Fungsi-Fungsi P2P Chat ---
+function generateUniqueIdP2P() {
+    return Math.random().toString(36).substr(2, 6); // Dibuat lebih pendek
+}
+
+function initializeP2PChat() {
+    if (!currentUserId) { // Hanya inisialisasi jika belum ada currentUserId (setelah login)
+        currentUserId = sessionStorage.getItem('p2pUserId');
+        if (!currentUserId) {
+            currentUserId = generateUniqueIdP2P();
+            sessionStorage.setItem('p2pUserId', currentUserId);
+        }
+    }
+    console.log("P2P Chat Initialized with User ID:", currentUserId);
+    registerUserActivityP2P();
+    setInterval(registerUserActivityP2P, USER_ACTIVITY_TIMEOUT / 2.5); // Lebih sering
+    setInterval(cleanupInactiveUsersP2P, USER_ACTIVITY_TIMEOUT);
+    updateP2PUsersList();
+}
+
+function registerUserActivityP2P() {
+    if (!currentUserId) return;
+    try {
+        localStorage.setItem(P2P_USER_PREFIX + currentUserId, Date.now().toString());
+    } catch (e) {
+        console.error("Error writing to localStorage (P2P Activity):", e);
+    }
+}
+
+function getActiveP2PUsers() {
+    const users = [];
+    const now = Date.now();
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(P2P_USER_PREFIX)) {
+            const userId = key.substring(P2P_USER_PREFIX.length);
+            const lastActive = parseInt(localStorage.getItem(key) || '0');
+            if (now - lastActive < USER_ACTIVITY_TIMEOUT) {
+                if (userId !== currentUserId) {
+                    users.push(userId);
+                }
+            }
+        }
+    }
+    return users.sort(); // Sortir agar urutan konsisten
+}
+
+function cleanupInactiveUsersP2P() {
+    const now = Date.now();
+    let changed = false;
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(P2P_USER_PREFIX)) {
+            const lastActive = parseInt(localStorage.getItem(key) || '0');
+            if (now - lastActive >= USER_ACTIVITY_TIMEOUT) {
+                keysToRemove.push(key);
+                const userId = key.substring(P2P_USER_PREFIX.length);
+                removeUserDataP2P(userId); // Hapus juga pesan dan typing indicator
+                changed = true;
+            }
+        }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    if (changed) updateP2PUsersList();
+}
+
+function removeUserDataP2P(userId) {
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key) {
+            if (key.startsWith(P2P_MESSAGE_PREFIX)) {
+                const parts = key.split('_');
+                if (parts[1] === userId || parts[2] === userId) keysToRemove.push(key);
+            } else if (key.startsWith(P2P_TYPING_PREFIX + userId) || (key.startsWith(P2P_TYPING_PREFIX) && key.endsWith('_' + userId))) {
+                keysToRemove.push(key);
+            }
+        }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+}
+
+function updateP2PUsersList() {
+    if (!p2pUsersListContainer || !currentUserId) return; // Jangan update jika belum login/ID belum ada
+    const t = translations[currentLang];
+    const users = getActiveP2PUsers();
+    p2pUsersListContainer.innerHTML = '';
+
+    if (users.length === 0) {
+        const li = document.createElement('li');
+        li.textContent = t.p2pNoOtherUsers;
+        li.style.fontStyle = 'italic';
+        li.style.color = '#888';
+        p2pUsersListContainer.appendChild(li);
+        return;
+    }
+
+    users.forEach(userId => {
+        const li = document.createElement('li');
+        const userNamePrefix = `${t.p2pChatWith}${userId.substring(0, 5)}...`;
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = userNamePrefix;
+        li.appendChild(nameSpan);
+
+        li.dataset.userId = userId;
+        li.addEventListener('click', () => openP2PChatWindow(userId));
+
+        const indicatorsContainer = document.createElement('div'); // Kontainer untuk typing dan unread
+        indicatorsContainer.style.display = 'flex';
+        indicatorsContainer.style.alignItems = 'center';
+
+        // Cek status typing (typerId_targetId) -> user X is typing to ME (currentUserId)
+        const typingKey = P2P_TYPING_PREFIX + userId + '_' + currentUserId;
+        if (localStorage.getItem(typingKey) === 'true') {
+            const typingTextSpan = document.createElement('span');
+            typingTextSpan.classList.add('typing-text');
+            typingTextSpan.textContent = `(${t.p2pIsTypingSuffix.trim()})`; // (sedang mengetik...)
+            indicatorsContainer.appendChild(typingTextSpan);
+        }
+        
+        if (checkUnreadMessagesP2P(userId)) {
+            const unreadIndicator = document.createElement('span');
+            unreadIndicator.classList.add('unread-indicator');
+            indicatorsContainer.appendChild(unreadIndicator);
+        }
+        li.appendChild(indicatorsContainer);
+        p2pUsersListContainer.appendChild(li);
+    });
+}
+
+function checkUnreadMessagesP2P(targetUserId) {
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(P2P_MESSAGE_PREFIX)) {
+            const parts = key.split('_');
+            if (parts[1] === targetUserId && parts[2] === currentUserId && parts[4] === 'false') {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+function markMessagesAsReadP2P(targetUserId) {
+    const keysToUpdate = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(P2P_MESSAGE_PREFIX)) {
+            const parts = key.split('_');
+            if (parts[1] === targetUserId && parts[2] === currentUserId && parts[4] === 'false') {
+                keysToUpdate.push(key);
+            }
+        }
+    }
+    keysToUpdate.forEach(key => {
+        const messageDataStr = localStorage.getItem(key);
+        if (messageDataStr) {
+            try {
+                const messageData = JSON.parse(messageDataStr);
+                messageData.isRead = true;
+                const newKey = `${P2P_MESSAGE_PREFIX}${messageData.sender}_${messageData.receiver}_${messageData.timestamp}_true`;
+                localStorage.setItem(newKey, JSON.stringify(messageData));
+                localStorage.removeItem(key);
+            } catch (e) { console.error("Error parsing/updating message read status:", e); }
+        }
+    });
+    updateP2PUsersList();
+}
+
+function getNextChatWindowPositionP2P() {
+    const windowWidth = 320; const spacing = 20;
+    const screenWidth = window.innerWidth;
+    // Cek sidebar kanan, jika ada dan terlihat, jadikan base offset
+    let baseRightOffset = spacing;
+    if (p2pChatUsersWidget && getComputedStyle(p2pChatUsersWidget).display !== 'none' && p2pChatUsersWidget.offsetWidth > 0) {
+         // Ambil posisi dan lebar sidebar kanan dari DOM jika mungkin, jika tidak, gunakan nilai default
+        const sidebarRightElement = document.querySelector('.sidebar-right');
+        if (sidebarRightElement && getComputedStyle(sidebarRightElement).display !== 'none') {
+             baseRightOffset = sidebarRightElement.offsetWidth + spacing * 2;
+        }
+    } else if (document.querySelector('.sidebar-right') && getComputedStyle(document.querySelector('.sidebar-right')).display !== 'none') {
+        // Fallback jika p2pChatUsersWidget tidak terlihat tapi sidebar-right masih ada
+        baseRightOffset = document.querySelector('.sidebar-right').offsetWidth + spacing * 2;
+    }
+
+
+    let positionIndex = 0;
+    for (let i = 0; i < MAX_P2P_CHAT_WINDOWS; i++) {
+        if (!p2pChatWindowPositions.includes(i)) {
+            positionIndex = i;
+            break;
+        }
+        if (i === MAX_P2P_CHAT_WINDOWS - 1) positionIndex = 0; // Timpa yang pertama jika semua slot dipakai
+    }
+    
+    const calculatedRight = baseRightOffset + positionIndex * (windowWidth + spacing);
+    // Pastikan jendela tidak keluar layar
+    if (calculatedRight + windowWidth > screenWidth) {
+        return { index: positionIndex, right: spacing }; // Jika akan keluar, taruh di paling kanan layar
+    }
+    return { index: positionIndex, right: calculatedRight };
+}
+
+function openP2PChatWindow(targetUserId) {
+    const t = translations[currentLang];
+    if (targetUserId === currentUserId) { alert(t.p2pSelfChatError); return; }
+    if (!getActiveP2PUsers().includes(targetUserId)) { alert(t.p2pUserOffline); updateP2PUsersList(); return; }
+
+    if (openP2pChatWindows[targetUserId]) {
+        const existingWindow = openP2pChatWindows[targetUserId];
+        existingWindow.style.display = 'flex'; // Pastikan terlihat
+        setTimeout(() => existingWindow.classList.add('open'), 10); // Paksa reflow untuk transisi
+        existingWindow.querySelector('.p2p-chat-input').focus();
+        markMessagesAsReadP2P(targetUserId);
+        // Bring to front (Optional, can be complex with z-index management)
+        Object.values(openP2pChatWindows).forEach(win => win.style.zIndex = '1010');
+        existingWindow.style.zIndex = '1011';
+        return;
+    }
+
+    if (Object.keys(openP2pChatWindows).length >= MAX_P2P_CHAT_WINDOWS) {
+        alert("Terlalu banyak jendela chat P2P terbuka. Tutup beberapa untuk membuka yang baru."); return;
+    }
+    
+    const { index: positionIndex, right: rightPosition } = getNextChatWindowPositionP2P();
+    
+    const chatWindow = document.createElement('div');
+    chatWindow.classList.add('chat-popup', 'p2p-chat-window');
+    chatWindow.id = `p2pChatWindow_${targetUserId}`;
+    chatWindow.dataset.targetUserId = targetUserId;
+    chatWindow.dataset.positionIndex = positionIndex;
+    chatWindow.style.right = `${rightPosition}px`;
+    chatWindow.style.zIndex = '1011'; // Jendela baru di atas yang lain
+     // Kurangi z-index jendela lain
+    Object.values(openP2pChatWindows).forEach(win => win.style.zIndex = '1010');
+
+
+    chatWindow.innerHTML = `
+        <div class="chat-header">
+            <span class="p2p-chat-header-text">${t.p2pChatWith}${targetUserId.substring(0, 5)}...</span>
+            <button class="chat-close-btn p2p-chat-close-btn" title="${t.chatCloseTitle}">&times;</button>
+        </div>
+        <div class="chat-messages p2p-chat-messages"></div>
+        <div class="chat-input-area">
+            <textarea class="p2p-chat-input" placeholder="${t.p2pTypeMessagePlaceholder}"></textarea>
+            <button class="p2p-chat-send-btn">${t.chatSend}</button>
+        </div>
+    `;
+    document.body.appendChild(chatWindow);
+    openP2pChatWindows[targetUserId] = chatWindow;
+    p2pChatWindowPositions.push(positionIndex); // Tandai posisi ini terpakai
+
+    setTimeout(() => chatWindow.classList.add('open'), 10);
+
+    const closeBtn = chatWindow.querySelector('.p2p-chat-close-btn');
+    const sendBtn = chatWindow.querySelector('.p2p-chat-send-btn');
+    const inputField = chatWindow.querySelector('.p2p-chat-input');
+
+    chatWindow.addEventListener('mousedown', () => { // Bawa ke depan saat diklik
+        Object.values(openP2pChatWindows).forEach(win => win.style.zIndex = '1010');
+        chatWindow.style.zIndex = '1011';
+    });
+
+    closeBtn.addEventListener('click', () => {
+        chatWindow.classList.remove('open');
+        const posIdxToRemove = parseInt(chatWindow.dataset.positionIndex);
+        p2pChatWindowPositions = p2pChatWindowPositions.filter(p => p !== posIdxToRemove);
+        setTimeout(() => {
+            if (chatWindow.parentNode) document.body.removeChild(chatWindow);
+            delete openP2pChatWindows[targetUserId];
+        }, 300);
+    });
+
+    sendBtn.addEventListener('click', () => sendP2PMessage(targetUserId, inputField));
+    inputField.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendP2PMessage(targetUserId, inputField); }
+    });
+    inputField.addEventListener('input', () => { 
+        autoResizeTextarea(inputField, 40, 70); 
+        sendTypingIndicatorP2P(targetUserId, inputField.value.trim() !== '');
+    });
+    inputField.addEventListener('blur', () => sendTypingIndicatorP2P(targetUserId, false));
+
+    loadP2PChatHistory(targetUserId, chatWindow.querySelector('.p2p-chat-messages'));
+    markMessagesAsReadP2P(targetUserId);
+    inputField.focus();
+}
+
+function sendTypingIndicatorP2P(targetUserId, isTyping) {
+    const typingKey = P2P_TYPING_PREFIX + currentUserId + '_' + targetUserId; // Saya (currentUserId) sedang mengetik ke targetUserId
+    try {
+        if (isTyping) { localStorage.setItem(typingKey, 'true'); }
+        else { localStorage.removeItem(typingKey); }
+    } catch (e) { console.error("Error setting P2P typing indicator:", e); }
+}
+
+function sendP2PMessage(targetUserId, inputField) {
+    const messageText = inputField.value.trim();
+    if (messageText === '') return;
+    const timestamp = Date.now();
+    const messageData = { sender: currentUserId, receiver: targetUserId, text: messageText, timestamp: timestamp, isRead: false };
+    const messageKey = `${P2P_MESSAGE_PREFIX}${currentUserId}_${targetUserId}_${timestamp}_false`;
+    try { localStorage.setItem(messageKey, JSON.stringify(messageData)); }
+    catch (e) { console.error("Error sending P2P message:", e); alert("Gagal mengirim pesan."); return; }
+
+    const chatWindow = openP2pChatWindows[targetUserId];
+    if (chatWindow) { addP2PMessageToUI(chatWindow.querySelector('.p2p-chat-messages'), messageData.text, 'sent', messageData.timestamp); }
+    inputField.value = '';
+    autoResizeTextarea(inputField, 40, 70);
+    sendTypingIndicatorP2P(targetUserId, false);
+}
+
+function addP2PMessageToUI(container, text, type, timestamp, isTypingMsg = false) {
+    const messageElement = document.createElement('div');
+    messageElement.classList.add('message', type);
+    if (isTypingMsg) messageElement.classList.add('typing-indicator');
+    
+    const textP = document.createElement('p');
+    if(isTypingMsg) textP.innerHTML = `<em>${text}</em>`; else textP.textContent = text;
+    messageElement.appendChild(textP);
+
+    if (!isTypingMsg) { // Hanya tampilkan waktu untuk pesan non-typing
+        const timeSpan = document.createElement('span');
+        timeSpan.classList.add('message-time');
+        const date = new Date(timestamp);
+        timeSpan.textContent = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+        messageElement.appendChild(timeSpan);
+    }
+    
+    container.appendChild(messageElement);
+    container.scrollTop = container.scrollHeight;
+    return messageElement; // Kembalikan elemen untuk manipulasi (misal hapus typing indicator)
+}
+
+function loadP2PChatHistory(targetUserId, messagesContainer) {
+    messagesContainer.innerHTML = '';
+    const messages = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(P2P_MESSAGE_PREFIX)) {
+            const parts = key.split('_');
+            if ((parts[1] === targetUserId && parts[2] === currentUserId) || (parts[1] === currentUserId && parts[2] === targetUserId)) {
+                try { messages.push(JSON.parse(localStorage.getItem(key))); }
+                catch (e) { console.error("Error parsing P2P message history:", e); }
+            }
+        }
+    }
+    messages.sort((a, b) => a.timestamp - b.timestamp);
+    messages.forEach(msg => addP2PMessageToUI(messagesContainer, msg.text, msg.sender === currentUserId ? 'sent' : 'received', msg.timestamp));
+}
+
+function handleStorageEventP2P(event) {
+    if (!event.key || !currentUserId) return;
+    const t = translations[currentLang];
+
+    if (event.key.startsWith(P2P_USER_PREFIX) || (event.key.startsWith(P2P_TYPING_PREFIX) && event.key.includes('_' + currentUserId))) { // User activity or someone is typing to me
+        updateP2PUsersList();
+    }
+    
+    // Handle typing indicator *inside* chat window
+    if (event.key.startsWith(P2P_TYPING_PREFIX)) {
+        const parts = event.key.split('_'); // typing_typerId_targetId
+        const typerId = parts[1];
+        const targetId = parts[2];
+
+        if (targetId === currentUserId) { // TyperId sedang mengetik ke saya
+            const chatWindow = openP2pChatWindows[typerId];
+            if (chatWindow && chatWindow.classList.contains('open')) {
+                const messagesContainer = chatWindow.querySelector('.p2p-chat-messages');
+                let typingDiv = messagesContainer.querySelector(`.message.typing-indicator[data-typer-id="${typerId}"]`);
+                
+                const isTypingNow = localStorage.getItem(event.key) === 'true'; // Cek status terbaru dari localStorage
+
+                if (isTypingNow && !typingDiv) {
+                    typingDiv = addP2PMessageToUI(messagesContainer, `${typerId.substring(0,5)}... ${t.p2pIsTypingSuffix}`, 'received', Date.now(), true);
+                    typingDiv.dataset.typerId = typerId; // Tandai agar bisa dihapus
+                } else if (!isTypingNow && typingDiv) {
+                    messagesContainer.removeChild(typingDiv);
+                }
+            }
+        }
+    }
+
+
+    if (event.key.startsWith(P2P_MESSAGE_PREFIX)) {
+        const parts = event.key.split('_');
+        const senderId = parts[1];
+        const receiverId = parts[2];
+
+        if (receiverId === currentUserId) { // Pesan untuk saya
+            if (event.newValue) {
+                try {
+                    const messageData = JSON.parse(event.newValue);
+                    const chatWindow = openP2pChatWindows[senderId];
+                    if (chatWindow && chatWindow.classList.contains('open')) {
+                        addP2PMessageToUI(chatWindow.querySelector('.p2p-chat-messages'), messageData.text, 'received', messageData.timestamp);
+                        markMessagesAsReadP2P(senderId); // Otomatis tandai terbaca jika jendela terbuka
+                        // Hapus typing indicator dari sender jika ada
+                        const typingIndicatorInChat = chatWindow.querySelector(`.message.typing-indicator[data-typer-id="${senderId}"]`);
+                        if (typingIndicatorInChat) typingIndicatorInChat.remove();
+
+                    } else {
+                        if (!messageData.isRead) {
+                           updateP2PUsersList(); // Tampilkan indikator unread
+                        }
+                    }
+                } catch (e) { console.error("Error processing received P2P message from storage:", e); }
+            } else { // Pesan dihapus (misal, setelah dibaca oleh tab lain)
+                updateP2PUsersList();
             }
         }
     }
