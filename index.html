@@ -15,7 +15,7 @@
                 <div class="logo-container" id="loginLogoContainer">
                     <img id="loginLogo" src="logo_light.png" alt="App Logo">
                 </div>
-              <p class="login-subtitle">Express Yourself Freely, Anonymously</p>
+                <p class="login-subtitle">Express Yourself Freely, Anonymously</p>
             </div>
             <form class="login-form" id="loginForm">
                 <div class="form-group">
@@ -27,7 +27,7 @@
                 <button type="submit" class="login-btn">Masuk</button>
                 <div class="divider"><span>atau</span></div>
                 <button type="button" class="guest-btn" id="guestBtn">Lanjut sebagai Tamu</button>
-                </form>
+            </form>
         </div>
     </div>
 
@@ -47,6 +47,11 @@
                 </div>
 
                 <div class="header-right">
+                    <button class="icon-btn" id="p2pChatListToggleBtn" title="Obrolan P2P">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+                        <span class="p2p-chat-global-unread-indicator" id="p2pChatGlobalUnreadIndicator" style="display:none;"></span>
+                    </button>
+
                     <div class="main-menu-container">
                         <button class="main-menu-btn" id="mainMenuBtn" title="Menu">☰</button>
                         <div class="main-menu-dropdown" id="mainMenuDropdown">
@@ -142,6 +147,8 @@
                         <li><a href="#" data-filter-tag="ceritakecil">#CeritaKecil</a></li>
                     </ul>
                 </div>
+
+
                 <div class="sidebar-widget">
                     <h3 class="widget-title" id="widgetTitlePrompt">Pengingat Lembut</h3>
                     <p class="supportive-prompt" id="supportivePromptText1">Setiap perasaan itu valid. Kamu tidak sendirian.</p>
@@ -153,6 +160,20 @@
                     <a href="#" id="communityGuidelinesLink" class="sidebar-link" data-page="guidelines">Baca Panduan Komunitas</a>
                 </div>
             </aside>
+        </div>
+    </div>
+
+    <div class="chat-popup p2p-chat-window" id="activeP2pChatWindow" style="display: none;">
+        <div class="chat-header">
+            <span class="p2p-chat-header-text" id="activeP2pChatWithUser">Mengobrol dengan...</span>
+            <button class="chat-close-btn" id="closeActiveP2pChatWindowBtn">&times;</button>
+        </div>
+        <div class="chat-messages" id="activeP2pChatMessages">
+            </div>
+         <div class="p2p-typing-indicator" id="activeP2pTypingIndicator" style="display:none;">Sedang mengetik...</div>
+        <div class="chat-input-area">
+            <textarea class="p2p-chat-input" id="activeP2pChatMessageInput" placeholder="Ketik pesan..."></textarea>
+            <button class="p2p-chat-send-btn" id="activeP2pChatSendBtn">Kirim</button>
         </div>
     </div>
 

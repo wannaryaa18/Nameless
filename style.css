@@ -277,12 +277,13 @@ body.dark-mode .search-bar input::placeholder { color: #707070; }
     border: none;
     color: var(--text-light);
     cursor: pointer;
-    font-size: 22px;
+    font-size: 22px; /* Ukuran ikon SVG */
     padding: 5px;
     border-radius: 50%;
     width: 40px;
     height: 40px;
     transition: background-color 0.2s ease;
+    position: relative; /* Untuk positioning unread indicator */
 }
 body.dark-mode .header-right #chatSupportToggleButton,
 body.dark-mode .header-right #p2pChatListToggleBtn {
@@ -295,6 +296,27 @@ body.dark-mode .header-right #p2pChatListToggleBtn {
 body.dark-mode .header-right #chatSupportToggleButton:hover,
 body.dark-mode .header-right #p2pChatListToggleBtn:hover {
     background-color: var(--hover-bg-dark);
+}
+
+.p2p-chat-global-unread-indicator {
+    position: absolute;
+    top: 5px;    /* Disesuaikan agar pas dengan ikon yang lebih besar */
+    right: 5px;  /* Disesuaikan agar pas dengan ikon yang lebih besar */
+    width: 10px; /* Ukuran indikator */
+    height: 10px;/* Ukuran indikator */
+    background-color: var(--color-red);
+    border-radius: 50%;
+    border: 1.5px solid var(--card-light); /* Agar kontras dengan background tombol */
+    font-size: 8px; /* Ukuran font untuk angka jika ada */
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1; /* Agar angka ditengah */
+    pointer-events: none; /* Agar tidak mengganggu klik tombol */
+}
+body.dark-mode .p2p-chat-global-unread-indicator {
+    border-color: var(--card-dark);
 }
 
 
@@ -472,8 +494,6 @@ body.dark-mode .sidebar-left {
     display: inline;
     opacity: 1;
 }
-/* Tidak perlu lagi aturan khusus untuk .sidebar-post-btn span.nav-text di sini,
-   karena sudah dicakup oleh .sidebar-left:hover .nav-text */
 
 .sidebar-nav .nav-item {
     display: flex;
@@ -522,9 +542,9 @@ body.dark-mode .nav-icon {
     margin-right: 18px;
 }
 
-.nav-text { /* Berlaku untuk semua teks navigasi, termasuk di tombol post */
+.nav-text { 
     font-size: 1em;
-    display: none; /* Defaultnya tersembunyi */
+    display: none; 
     opacity: 0;
     transition: opacity 0.2s ease 0.1s;
     color: var(--text-light);
@@ -542,30 +562,29 @@ body.dark-mode .nav-text {
     padding: 12px 10px;
     margin-top: 20px;
     background: linear-gradient(135deg, var(--color-cream), var(--color-cream));
-    color: #FFFFFF !important; /* Pastikan ikon plus putih */
+    color: #FFFFFF !important; 
     border: none;
     border-radius: 25px;
     font-size: 1em;
     font-weight: 600;
     cursor: pointer;
     transition: opacity 0.2s ease;
-    overflow: hidden; /* Penting agar .nav-text tidak keluar saat condensed */
+    overflow: hidden; 
 }
-.sidebar-post-btn .nav-icon { /* Ikon di dalam tombol post */
+.sidebar-post-btn .nav-icon { 
     color: #FFFFFF !important;
-    -webkit-text-fill-color: white; /* Untuk Safari */
+    -webkit-text-fill-color: white; 
     text-shadow: none !important;
     font-size: 1.3em;
     line-height: 1;
-    margin-right: 0; /* Default di condensed */
+    margin-right: 0; 
 }
 .sidebar-left:hover .sidebar-post-btn .nav-icon,
 .sidebar-left.expanded .sidebar-post-btn .nav-icon {
-    margin-right: 10px; /* Beri jarak saat expanded */
+    margin-right: 10px; 
 }
-.sidebar-post-btn .nav-text { /* Teks di dalam tombol post */
-    color: #000000 !important; /* Teksnya hitam */
-    /* Aturan display dan opacity akan mengikuti .nav-text global dan hover/expanded state */
+.sidebar-post-btn .nav-text { 
+    color: #000000 !important; 
 }
 .sidebar-post-btn:hover {
     opacity: 0.9;
@@ -578,7 +597,6 @@ body.dark-mode .nav-text {
     padding: 0;
 }
 
-/* ... (Sisa styling untuk Post Form, Feed, Post, Komentar, dll. sama seperti sebelumnya) ... */
 .post-form-container { margin-bottom: 20px; }
 .post-form { background: var(--card-light); border-radius: 10px; padding: 20px; box-shadow: 0 2px 4px var(--shadow-light); border: 1px solid var(--border-light); }
 body.dark-mode .post-form { background: var(--card-dark); border-color: var(--border-dark); box-shadow: 0 2px 4px var(--shadow-dark); }
@@ -752,8 +770,7 @@ body.dark-mode .sentiment-chart-placeholder { border-color: var(--border-dark); 
     transform: scale(1) translateY(0);
     opacity: 1;
 }
-/* Default untuk chat support, P2P akan override tinggi dan posisi */
-#chatSupportPopup { /* Jika masih ada tombol chat support */
+#chatSupportPopup { 
     height: 450px;
     max-height: 80vh;
     right: 20px;
@@ -784,7 +801,7 @@ body.dark-mode .chat-popup {
     display: flex; flex-direction: column; gap: 10px;
 }
 .message {
-    padding: 8px 12px; border-radius: 18px; /* Lebih bulat */
+    padding: 8px 12px; border-radius: 18px; 
     max-width: 80%; word-wrap: break-word;
     line-height: 1.4; font-size: 14px;
 }
@@ -800,11 +817,11 @@ body.dark-mode .chat-popup {
 .message .message-time { display: block; font-size: 0.7em; opacity: 0.7; }
 .message.sent .message-time { text-align: right; }
 .message.received .message-time { text-align: left; }
-.message.typing-indicator p { /* Untuk "User is typing..." di dalam chat window */
+.message.typing-indicator p { 
     font-style: italic;
-    color: var(--text-light); /* Sesuaikan dengan warna teks received message */
+    color: var(--text-light); 
     opacity: 0.8;
-    font-size: 0.9em; /* Lebih kecil sedikit */
+    font-size: 0.9em; 
     padding: 0; margin:0;
 }
 body.dark-mode .message.typing-indicator p { color: var(--text-dark); }
@@ -821,6 +838,8 @@ body.dark-mode .chat-input-area { border-top-color: var(--border-dark); }
     flex-grow: 1; padding: 10px; border: 1px solid var(--border-light);
     border-radius: 20px; resize: none; font-family: inherit; font-size: 14px;
     background-color: var(--chat-input-bg); color: var(--text-light); margin-right: 8px;
+    min-height: 40px; /* Tambahan untuk p2p-chat-input */
+    max-height: 70px; /* Tambahan untuk p2p-chat-input */
 }
 body.dark-mode #chatSupportInput, body.dark-mode .p2p-chat-input {
     border-color: var(--border-dark); color: var(--text-dark);
@@ -835,54 +854,179 @@ body.dark-mode #chatSupportInput, body.dark-mode .p2p-chat-input {
 }
 #chatSupportSendBtn:hover, .p2p-chat-send-btn:hover { background: var(--color-dark-green); }
 
-/* P2P Chat Specific Styles */
-#p2pChatUsersWidget { /* Widget di sidebar kanan */ }
-.p2p-users-list { list-style: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto; }
-.p2p-users-list li {
-    padding: 8px 10px; border-bottom: 1px solid var(--border-light); font-size: 0.9em;
-    cursor: pointer; transition: background-color 0.2s;
-    display: flex; justify-content: space-between; align-items: center;
-}
+
 .p2p-users-list li:last-child { border-bottom: none; }
 .p2p-users-list li:hover { background-color: var(--p2p-user-list-hover-bg); }
-.p2p-users-list li.is-typing {
-    /* font-style: italic; */ /* Tidak perlu jika sudah ada teks "(mengetik)" */
-    /* color: var(--color-green); */
-}
-.p2p-users-list li .typing-text { /* Untuk teks "(mengetik)" di daftar user */
+.p2p-users-list li.is-typing { }
+.p2p-users-list li .typing-text { 
     font-size: 0.85em;
     font-style: italic;
     color: var(--color-green);
     margin-left: 5px;
 }
 body.dark-mode .p2p-users-list li { border-bottom-color: var(--border-dark); }
-.p2p-users-list li .unread-indicator {
+.p2p-users-list li .unread-indicator { /* Indikator di sidebar user list (titik kecil) */
     display: inline-block; width: 8px; height: 8px;
     background-color: var(--color-red); border-radius: 50%;
     margin-left: 5px;
 }
-.p2p-chat-window { /* Jendela chat P2P individual */
-    height: 400px; max-height: 70vh; z-index: 1010;
+.p2p-users-list li.active-chat-user { /* Pengguna yang sedang aktif chat dengannya di daftar */
+    background-color: var(--color-green) !important;
+    color: white !important;
+    font-weight: 600;
 }
-.p2p-chat-window .p2p-chat-header-text { font-size: 0.9em; }
+body.dark-mode .p2p-users-list li.active-chat-user {
+    background-color: var(--color-dark-green) !important;
+}
+.p2p-users-list li.active-chat-user .p2p-user-status,
+.p2p-users-list li.active-chat-user .p2p-user-typing-status,
+.p2p-users-list li.active-chat-user .unread-p2p-indicator {
+    color: white !important; 
+    opacity: 0.8;
+}
+.p2p-user-info {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+.p2p-user-name {
+    font-weight: 500;
+}
+.p2p-user-status { 
+    font-size: 0.8em;
+    color: var(--color-green);
+    opacity: 0.9;
+}
+.p2p-user-typing-status { /* Untuk "sedang mengetik..." di list user */
+    font-size: 0.8em;
+    font-style: italic;
+    color: var(--color-blue); 
+    margin-top: 2px;
+}
+.unread-p2p-indicator { /* Indikator angka di list user */
+    display: inline-block;
+    min-width: 18px; 
+    height: 18px;
+    background-color: var(--color-red);
+    color: white;
+    border-radius: 9px; 
+    font-size: 0.75em;
+    line-height: 18px; 
+    text-align: center;
+    padding: 0 5px; 
+    margin-left: 8px;
+    font-weight: bold;
+}
+
+
+.p2p-chat-window { /* Jendela chat P2P individual */
+    /* Menggunakan .chat-popup sebagai basis */
+    height: 400px; max-height: 70vh; z-index: 1010; /* Lebih tinggi dari chat support biasa */
+    width: 340px; /* Sedikit lebih lebar dari default */
+    right: 20px; /* Posisi default, bisa di-override jika ada multiple windows */
+}
+.p2p-chat-window .p2p-chat-header-text { font-size: 0.9em; font-weight: 600; }
 .p2p-chat-window .message { max-width: 85%; }
-.p2p-chat-window .p2p-chat-input { min-height: 40px; max-height: 70px; }
+/* .p2p-chat-window .p2p-chat-input { min-height: 40px; max-height: 70px; } Sudah di atas */
+
+.p2p-typing-indicator { /* Indikator mengetik di dalam jendela chat P2P */
+    padding: 5px 15px;
+    font-size: 0.85em;
+    color: var(--text-light);
+    opacity: 0.7;
+    font-style: italic;
+    background-color: var(--chat-popup-bg); 
+}
+body.dark-mode .p2p-typing-indicator {
+    color: var(--text-dark);
+}
+
+
+/* === CSS TAMBAHAN UNTUK FITUR BUBBLE CHAT MENU === */
+.page-content-container.chat-p2p-list-view {
+    /* Tidak perlu style khusus jika h2 default sudah cukup */
+    /* padding-top: 0; /* Jika h2 dari loadPageContent sudah cukup sebagai header */
+}
+
+.page-content-container .p2p-users-list-wrapper {
+    width: 100%;
+    max-width: 600px; 
+    margin: 20px auto; /* Beri margin atas bawah, dan pusatkan */
+    padding: 0; /* Padding internal bisa diatur oleh .p2p-users-list jika perlu */
+    background-color: transparent; /* Biarkan background dari page-content-container atau item list */
+    border-radius: 0; /* Tidak perlu border/shadow di wrapper ini */
+    box-shadow: none;
+}
+
+/* Styling untuk .p2p-users-list yang ada di dalam .page-content-container */
+.page-content-container .p2p-users-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: none; /* Tidak perlu max-height karena ini halaman utama */
+    overflow-y: visible; /* Tidak perlu scroll di sini */
+    background-color: var(--card-light); /* Background untuk list */
+    border-radius: 8px;
+    box-shadow: var(--shadow-light);
+    border: 1px solid var(--border-light);
+}
+body.dark-mode .page-content-container .p2p-users-list {
+    background-color: var(--card-dark);
+    box-shadow: var(--shadow-dark);
+    border-color: var(--border-dark);
+}
+
+.page-content-container .p2p-users-list li {
+    padding: 12px 18px; /* Padding lebih besar untuk tampilan halaman */
+    border-bottom: 1px solid var(--border-light);
+    /* Styling lain bisa mengikuti .p2p-users-list li yang sudah ada */
+}
+body.dark-mode .page-content-container .p2p-users-list li {
+    border-bottom-color: var(--border-dark);
+}
+.page-content-container .p2p-users-list li:last-child {
+    border-bottom: none;
+}
+.page-content-container .p2p-users-list li:hover {
+    background-color: var(--hover-bg-light); /* Atau var(--p2p-user-list-hover-bg) */
+}
+body.dark-mode .page-content-container .p2p-users-list li:hover {
+    background-color: var(--hover-bg-dark);
+}
+
+.page-content-container #p2pUsersEmptyState { /* Empty state di halaman utama */
+    text-align: center;
+    padding: 30px 20px;
+    color: var(--text-light);
+    font-size: 1.1em;
+    background-color: var(--card-light);
+    border-radius: 8px;
+    box-shadow: var(--shadow-light);
+    border: 1px solid var(--border-light);
+    margin-top: 20px;
+}
+body.dark-mode .page-content-container #p2pUsersEmptyState {
+    color: var(--text-dark);
+    background-color: var(--card-dark);
+    box-shadow: var(--shadow-dark);
+    border-color: var(--border-dark);
+}
+/* === AKHIR CSS TAMBAHAN === */
 
 
 /* Responsive Adjustments */
 @media (max-width: 1200px) {
     .sidebar-left { width: var(--sidebar-width-condensed); }
-    /* .sidebar-left .nav-item .nav-text { display: none; opacity: 0; } */ /* DIHAPUS agar hover/expand global bekerja */
     .sidebar-left .nav-icon { margin-right: 0; }
     .main-feed-container, .page-content-container { margin: 0 15px; max-width: none; width: auto; }
-    /* Sidebar kanan tetap muncul di 1200px jika P2P Chat ada */
 }
 
 @media (max-width: 992px) {
     .sidebar-right { display: none; }
     .main-feed-container { max-width: none; }
-    #p2pChatUsersWidget { display: none !important; }
-    .header-right #p2pChatListToggleBtn { display: none !important; }
+    #p2pChatUsersWidget { display: none !important; } 
+    /* Tombol P2P di header tetap muncul, karena akan membuka halaman utama */
+    /* .header-right #p2pChatListToggleBtn { display: none !important; } */ 
 }
 
 @media (max-width: 768px) {
@@ -914,9 +1058,12 @@ body.dark-mode .p2p-users-list li { border-bottom-color: var(--border-dark); }
     .setting-item-toggle span { margin-bottom: 8px; }
     .setting-item-toggle .switch { margin-top: 5px; }
 
-    .chat-popup, .p2p-chat-window {
+    .chat-popup, .p2p-chat-window { /* Berlaku untuk semua chat popup di mobile */
         width: calc(100% - 20px); bottom: 10px; right: 10px; left: 10px;
         height: 60vh; max-height: 350px;
+    }
+    .p2p-chat-window { /* Penyesuaian khusus P2P jika perlu di mobile */
+        height: 65vh; max-height: 400px; /* Mungkin sedikit lebih tinggi */
     }
 }
 
